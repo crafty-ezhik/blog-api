@@ -69,3 +69,38 @@
 ```cmd
 docker-compose -up build -d
 ```
+
+### Настройка окружения
+В папке `configs` создайте 2 файла `dev.yaml` и `prod.yaml` и заполните их значениями согласно файлу `test.yaml`.
+
+Далее добавьте в проект файл `.env`
+.ENV
+```.env
+# Окружение
+APP_ENV=prod
+
+# Сервер
+APP_SERVER_PORT=8080
+APP_SERVER_MODE=debug
+
+# База данных
+APP_DATABASE_HOST=localhost
+APP_DATABASE_PORT=5432
+APP_DATABASE_USERNAME=postgres
+APP_DATABASE_PASSWORD=pass
+APP_DATABASE_DATABASE=db_name
+APP_DATABASE_SSLMODE=disable
+
+# JWT
+APP_JWT_SIGNING_KEY=my_signing_key
+APP_JWT_SECRET_KEY=my_encryption_key
+APP_JWT_ACCESS_TTL=5m
+APP_JWT_REFRESH_TTL=48h
+
+# Redis 
+APP_REDIS_HOST=host
+APP_REDIS_PORT=port
+```
+
+Выбрать рабочее окружение можно, используя переменную `APP_ENV=`, по умолчанию используется `dev`.
+>**Примечание** - значение переменной должно совпадать с именем файла конфигурации 

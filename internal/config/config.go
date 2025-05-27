@@ -71,7 +71,7 @@ func LoadConfig(path string) (*Config, error) {
 			log.Fatalf("Ошибка чтения файла конфигурации, %s", err)
 		}
 	}
-	
+
 	err := viper.Unmarshal(&config, func(dc *mapstructure.DecoderConfig) {
 		dc.TagName = "mapstructure"
 		dc.Result = &config

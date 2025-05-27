@@ -1,0 +1,21 @@
+server:
+  port: port
+  mode: debug # info or debug
+
+database:
+  host: host
+  port: port
+  username: some_name
+  password: #use .env file
+  database: some_name_database
+  sslmode: disable
+
+jwt:
+  secret_key:  #use .env file
+  signing_key: #use .env file
+  access_ttl: 15m
+  refresh_ttl: 24h
+
+redis:
+  host: host
+  port: port

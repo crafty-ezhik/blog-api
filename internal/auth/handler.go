@@ -41,7 +41,6 @@ func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 			"error":   err.Error(),
 		})
 	}
-
 	return c.Status(fiber.StatusOK).JSON(responseData)
 }
 

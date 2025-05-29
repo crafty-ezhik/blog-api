@@ -13,7 +13,7 @@ type RegisterRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,gte=6"`
 	Name     string `json:"name" validate:"required,gte=1"`
-	Age      int    `json:"age" validate:"required,gte=1, lte=120"`
+	Age      int    `json:"age" validate:"required,gte=1,lte=120"`
 }
 
 type RegisterResponse struct {

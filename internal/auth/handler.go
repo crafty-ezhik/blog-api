@@ -34,11 +34,19 @@ func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 	if err != nil {
 		return nil
 	}
+	responseData, err := h.AuthService.Login(body)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
 
-	return c.Status(fiber.StatusOK).JSON(body)
+	return c.Status(fiber.StatusOK).JSON(responseData)
 }
 
 func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
+
 	return nil
 }
 

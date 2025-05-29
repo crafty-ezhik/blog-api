@@ -10,7 +10,7 @@ import (
 
 type AuthService interface {
 	Register(data *RegisterRequest) (bool, error)
-	Login(email string, password string) (string, error)
+	Login(data *LoginRequest) (*LoginResponse, error)
 }
 
 type AuthServiceimpl struct {
@@ -22,8 +22,23 @@ func NewAuthService(cfg *config.Config, userRepo user.UserRepository) *AuthServi
 	return &AuthServiceimpl{cfg: cfg, UserRepo: userRepo}
 }
 
-func (s *AuthServiceimpl) Login(email string, password string) (string, error) {
-	return "", nil
+func (s *AuthServiceimpl) Login(data *LoginRequest) (*LoginResponse, error) {
+	existedUser, err := s.UserRepo.FindByEmail(data.Email)
+	if err != nil || existedUser == nil {
+		return nil, errors.New("invalid credentials")
+	}
+	hashedPassword := existedUser.Password
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(data.Password))
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+	// TODO: Сделать генерацию токенов
+	accessToken := "1"
+	refreshToken := "1"
+
+	output := &LoginResponse{AccessToken: accessToken, RefreshToken: refreshToken}
+
+	return output, nil
 }
 
 func (s *AuthServiceimpl) Register(data *RegisterRequest) (bool, error) {

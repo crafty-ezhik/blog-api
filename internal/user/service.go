@@ -3,8 +3,8 @@ package user
 import "github.com/crafty-ezhik/blog-api/internal/models"
 
 type UserService interface {
-	GetByID(userID uint) (models.User, error)
-	GetByEmail(email string) (models.User, error)
+	GetByID(userID uint) (*models.User, error)
+	GetByEmail(email string) (*models.User, error)
 	Create(user *models.User) error
 	Update(user *models.User) error
 	Delete(userID uint) error
@@ -18,11 +18,11 @@ func NewUserService(UserRepo UserRepository) *UserServiceImpl {
 	return &UserServiceImpl{UserRepo: UserRepo}
 }
 
-func (s *UserServiceImpl) GetByID(userID uint) (models.User, error) {
+func (s *UserServiceImpl) GetByID(userID uint) (*models.User, error) {
 	return s.UserRepo.FindByID(userID)
 }
 
-func (s *UserServiceImpl) GetByEmail(email string) (models.User, error) {
+func (s *UserServiceImpl) GetByEmail(email string) (*models.User, error) {
 	return s.UserRepo.FindByEmail(email)
 }
 

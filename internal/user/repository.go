@@ -6,8 +6,8 @@ import (
 )
 
 type UserRepository interface {
-	FindByID(userId uint) (models.User, error)
-	FindByEmail(email string) (models.User, error)
+	FindByID(userId uint) (*models.User, error)
+	FindByEmail(email string) (*models.User, error)
 	Create(user *models.User) error
 	Update(user *models.User) error
 	Delete(userID uint) error
@@ -21,26 +21,32 @@ func NewUserRepository(db *gorm.DB) *UserRepositoryImpl {
 	return &UserRepositoryImpl{db: db}
 }
 
-func (service *UserRepositoryImpl) FindByID(userId uint) (models.User, error) {
-	var user models.User
-	result := service.db.First(&user, userId)
-	return user, result.Error
+func (repo *UserRepositoryImpl) FindByID(userId uint) (*models.User, error) {
+	var user *models.User
+	result := repo.db.First(user, userId)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return user, nil
 }
 
-func (service *UserRepositoryImpl) FindByEmail(email string) (models.User, error) {
-	var user models.User
-	result := service.db.Where("email = ?", email).First(&user)
-	return user, result.Error
+func (repo *UserRepositoryImpl) FindByEmail(email string) (*models.User, error) {
+	var user *models.User
+	result := repo.db.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return user, nil
 }
 
-func (service *UserRepositoryImpl) Create(user *models.User) error {
-	return service.db.Create(user).Error
+func (repo *UserRepositoryImpl) Create(user *models.User) error {
+	return repo.db.Create(user).Error
 }
 
-func (service *UserRepositoryImpl) Update(user *models.User) error {
-	return service.db.Save(user).Error
+func (repo *UserRepositoryImpl) Update(user *models.User) error {
+	return repo.db.Save(user).Error
 }
 
-func (service *UserRepositoryImpl) Delete(userID uint) error {
-	return service.db.Delete(&userID).Error
+func (repo *UserRepositoryImpl) Delete(userID uint) error {
+	return repo.db.Delete(&userID).Error
 }

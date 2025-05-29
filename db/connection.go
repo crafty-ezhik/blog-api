@@ -9,7 +9,7 @@ import (
 
 func GetConnection(conf *config.Config) *gorm.DB {
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		"host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
 		conf.DB.Host,
 		conf.DB.Username,
 		conf.DB.Password,

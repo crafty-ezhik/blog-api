@@ -1,21 +1,25 @@
 package routes
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/crafty-ezhik/blog-api/internal/auth"
+	"github.com/gofiber/fiber/v2"
+)
 
-type Routes struct {
+type RouteDeps struct {
+	AuthHandler auth.AuthHandler
 }
 
-func SetupRoutes(app *fiber.App) {
-	api := app.Group("/api")
-
+func SetupRoutes(app *fiber.App, deps RouteDeps) {
 	// Auth
-	api.Route("/auth", func(router fiber.Router) {
-		router.Post("/register", pass)
-		router.Post("/login", pass)
-		router.Post("/logout", pass)     // TODO: Нужна проверка access токена
-		router.Post("/logout-all", pass) // TODO: Нужна проверка access токена
-		router.Post("/refresh", pass)    // TODO: Нужна проверка refresh токена
+	app.Route("/auth", func(router fiber.Router) {
+		router.Post("/register", deps.AuthHandler.Register)
+		router.Post("/login", deps.AuthHandler.Login)
+		router.Post("/logout", deps.AuthHandler.Logout)        // TODO: Нужна проверка access токена
+		router.Post("/logout-all", deps.AuthHandler.LogoutAll) // TODO: Нужна проверка access токена
+		router.Post("/refresh", deps.AuthHandler.Refresh)      // TODO: Нужна проверка refresh токена
 	})
+
+	api := app.Group("/api")
 
 	// Users
 	api.Route("users", func(router fiber.Router) {
@@ -39,7 +43,6 @@ func SetupRoutes(app *fiber.App) {
 		router.Put("/:id/comments/:commentId", pass)    // Обновление комментария
 		router.Delete("/:id/comments/:commentId", pass) // Удаление комментария
 	})
-
 }
 
 func pass(c *fiber.Ctx) error {

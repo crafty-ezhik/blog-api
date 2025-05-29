@@ -11,12 +11,10 @@ type (
 	ErrorResponse struct {
 		Error        bool
 		FailedFields string
-		Tag          string
-		Value        any
 	}
 
 	XValidator struct {
-		validator *validator.Validate
+		Validator *validator.Validate
 	}
 
 	GlobalErrorHandlerResp struct {
@@ -25,16 +23,31 @@ type (
 	}
 )
 
+func (v XValidator) Validate(data any) *fiber.Error {
+
+	if errs := v.validateData(data); len(errs) > 0 && errs[0].Error {
+		errMsg := make([]string, 0)
+		for _, err := range errs {
+			errMsg = append(errMsg, fmt.Sprintf(
+				"[%s]",
+				err.FailedFields,
+			))
+		}
+		return &fiber.Error{
+			Code:    fiber.StatusBadRequest,
+			Message: "Invalid field or its absence: " + strings.Join(errMsg, " and "),
+		}
+	}
+	return nil
+}
+
 func (v XValidator) validateData(data any) []ErrorResponse {
 	var validationErrors []ErrorResponse
 
-	errs := v.validator.Struct(data)
+	errs := v.Validator.Struct(data)
 	if errs != nil {
 		for _, err := range errs.(validator.ValidationErrors) {
 			var elem ErrorResponse
-
-			elem.Tag = err.Tag()
-			elem.Value = err.Value()
 			elem.FailedFields = err.Field()
 			elem.Error = true
 
@@ -42,25 +55,4 @@ func (v XValidator) validateData(data any) []ErrorResponse {
 		}
 	}
 	return validationErrors
-}
-
-func (v XValidator) Validate(data any) *fiber.Error {
-
-	if errs := v.validateData(data); len(errs) > 0 && errs[0].Error {
-		errMsg := make([]string, 0)
-
-		for _, err := range errs {
-			errMsg = append(errMsg, fmt.Sprintf(
-				"[%s]: '%v' | Needs to implement '%s'",
-				err.FailedFields,
-				err.Value,
-				err.Tag,
-			))
-		}
-		return &fiber.Error{
-			Code:    fiber.StatusBadRequest,
-			Message: strings.Join(errMsg, " and "),
-		}
-	}
-	return nil
 }

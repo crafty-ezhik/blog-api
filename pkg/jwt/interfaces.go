@@ -3,7 +3,7 @@ package jwt
 import "time"
 
 type BlackListStorage interface {
-	IsBlackListed(token string) (bool, error)
+	IsBlackListed(token string) bool
 	AddToBlackList(token string, ttl time.Duration) error
 }
 

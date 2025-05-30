@@ -100,11 +100,7 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 	}
 
 	// Получение UserID
-	userID, ok := claims["user_id"].(uint)
-	if !ok {
-		// TODO: Добавить логирование ошибки
-		return nil, errors.New(ErrInvalidToken)
-	}
+	userID := uint(claims["user_id"].(float64))
 
 	// Получение и проверка версии
 	version := uint(claims["version"].(float64))
@@ -134,13 +130,20 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 
 func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
 	// Надо проверить не черном ли списке токен
-	if ok, err := j.jwtService.blackLister.IsBlackListed(refreshToken); err != nil || !ok {
+	if j.jwtService.blackLister.IsBlackListed(refreshToken) {
 		// TODO: Добавить логирование ошибки
 		return nil, errors.New(ErrInBlackList)
 	}
 
 	// Парсинг токена
 	tokenData, err := j.VerifyToken(refreshToken)
+	if err != nil {
+		// TODO: Добавить логирование ошибки
+		return nil, err
+	}
+
+	// Увеличение версии токена
+	err = j.jwtService.versioner.IncrementVersion(tokenData.UserId)
 	if err != nil {
 		// TODO: Добавить логирование ошибки
 		return nil, err
@@ -165,13 +168,6 @@ func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
 		return nil, err
 	}
 
-	// Увеличение версии токена
-	err = j.jwtService.versioner.IncrementVersion(tokenData.UserId)
-	if err != nil {
-		// TODO: Добавить логирование ошибки
-		return nil, err
-	}
-
 	// Возврат значений
 	return &Tokens{
 		AccessToken:  newAccessToken,
@@ -180,7 +176,7 @@ func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
 }
 
 func (j *JWT) Logout(refreshToken string) error {
-	if ok, err := j.jwtService.blackLister.IsBlackListed(refreshToken); err != nil || !ok {
+	if j.jwtService.blackLister.IsBlackListed(refreshToken) {
 		// TODO: Добавить логирование ошибки
 		return errors.New(ErrInBlackList)
 	}

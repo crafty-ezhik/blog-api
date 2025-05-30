@@ -19,9 +19,9 @@ func NewRedisStorage(client *redis.Client) (*RedisBlackList, *RedisVersioner) {
 	return &RedisBlackList{client: client}, &RedisVersioner{client: client}
 }
 
-func (r *RedisBlackList) IsBlackListed(token string) (bool, error) {
-	val, err := r.client.Get(context.Background(), "jwt_refresh:"+token).Result()
-	return val == "revoked", err
+func (r *RedisBlackList) IsBlackListed(token string) bool {
+	val, _ := r.client.Get(context.Background(), "jwt_refresh:"+token).Result()
+	return val == "revoked"
 }
 
 func (r *RedisBlackList) AddToBlackList(token string, ttl time.Duration) error {
@@ -35,6 +35,7 @@ func (r *RedisVersioner) IncrementVersion(userID uint) error {
 func (r *RedisVersioner) GetVersion(userID uint) (uint, error) {
 	val, err := r.client.Get(context.Background(), "user_version:"+strconv.Itoa(int(userID))).Result()
 	if val == "" || err != nil {
+		// TODO: Стоит добавить чтобы добавлялась запись с этим пользователем
 		return 0, nil
 	}
 	version, err := strconv.ParseUint(val, 10, 32)

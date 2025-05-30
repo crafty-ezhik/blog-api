@@ -16,7 +16,6 @@ const (
 const (
 	ErrUnexpectedSigningMethod = "unexpected signing method"
 	ErrInvalidToken            = "invalid token"
-	ErrTokenNotFound           = "token not found"
 	ErrSessionExpired          = "session expired"
 	ErrInternalServer          = "internal server error"
 	ErrRefreshExpired          = "refresh token expired due to logout / password change"

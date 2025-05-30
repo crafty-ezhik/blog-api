@@ -34,8 +34,8 @@ func (r *RedisVersioner) IncrementVersion(userID uint) error {
 
 func (r *RedisVersioner) GetVersion(userID uint) (uint, error) {
 	val, err := r.client.Get(context.Background(), "user_version:"+strconv.Itoa(int(userID))).Result()
-	if val == "" {
-		return 0, err
+	if val == "" || err != nil {
+		return 0, nil
 	}
 	version, err := strconv.ParseUint(val, 10, 32)
 	return uint(version), err

@@ -14,9 +14,8 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 	app.Route("/auth", func(router fiber.Router) {
 		router.Post("/register", deps.AuthHandler.Register)
 		router.Post("/login", deps.AuthHandler.Login)
-		router.Post("/logout", deps.AuthHandler.Logout)        // TODO: Нужна проверка access токена
-		router.Post("/logout-all", deps.AuthHandler.LogoutAll) // TODO: Нужна проверка access токена
-		router.Post("/refresh", deps.AuthHandler.Refresh)      // TODO: Нужна проверка refresh токена
+		router.Post("/logout", deps.AuthHandler.Logout)   // TODO: Нужна проверка access токена
+		router.Post("/refresh", deps.AuthHandler.Refresh) // TODO: Нужна проверка refresh токена
 	})
 
 	api := app.Group("/api")

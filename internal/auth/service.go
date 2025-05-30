@@ -19,7 +19,7 @@ type AuthService interface {
 	Register(data *RegisterRequest) (bool, error)
 	Login(data *LoginRequest) (*LoginResponse, error)
 	Refresh(tokenStr string) (*cjwt.Tokens, *fiber.Cookie, error)
-	Logout(tokenStr string) error
+	Logout(tokenStr string) (*fiber.Cookie, error)
 }
 
 type AuthServiceimpl struct {
@@ -100,6 +100,20 @@ func (s *AuthServiceimpl) Refresh(tokenStr string) (*cjwt.Tokens, *fiber.Cookie,
 	return tokens, cookie, nil
 }
 
-func (s *AuthServiceimpl) Logout(tokenStr string) error {
-	return s.jwtAuth.Logout(tokenStr)
+func (s *AuthServiceimpl) Logout(tokenStr string) (*fiber.Cookie, error) {
+	err := s.jwtAuth.Logout(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+
+	cookie := new(fiber.Cookie)
+	cookie.Name = "refresh_token"
+	cookie.Value = ""
+	cookie.Path = "/"
+	cookie.MaxAge = -1
+	cookie.SameSite = fiber.CookieSameSiteLaxMode
+	cookie.HTTPOnly = true
+	cookie.Secure = true
+
+	return cookie, nil
 }

@@ -12,7 +12,6 @@ type AuthHandler interface {
 	Login(c *fiber.Ctx) error
 	Register(c *fiber.Ctx) error
 	Logout(c *fiber.Ctx) error
-	LogoutAll(c *fiber.Ctx) error
 	Refresh(c *fiber.Ctx) error
 }
 
@@ -46,8 +45,30 @@ func (h *AuthHandlerImpl) Login(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandlerImpl) Logout(c *fiber.Ctx) error {
+	refreshToken := c.Cookies("refresh_token")
+	if refreshToken == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"err":     jwt.ErrInBlackList,
+		})
+	}
 
-	return nil
+	cookie, err := h.AuthService.Logout(refreshToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"err":     err.Error(),
+		})
+	}
+
+	// Удаляем refresh из cookie
+	c.Cookie(cookie)
+
+	// Отдаем пользователю ответ, что он успешно вышел из системы
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"message": "logged out",
+	})
 }
 
 func (h *AuthHandlerImpl) Register(c *fiber.Ctx) error {
@@ -68,9 +89,6 @@ func (h *AuthHandlerImpl) Register(c *fiber.Ctx) error {
 		Message: "You have successfully registered",
 	}
 	return c.Status(fiber.StatusCreated).JSON(response)
-}
-func (h *AuthHandlerImpl) LogoutAll(c *fiber.Ctx) error {
-	return nil
 }
 
 func (h *AuthHandlerImpl) Refresh(c *fiber.Ctx) error {

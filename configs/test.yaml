@@ -19,3 +19,5 @@ jwt:
 redis:
   host: host
   port: port
+  password: #use .env file
+  db: 0

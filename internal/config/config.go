@@ -14,6 +14,7 @@ type Config struct {
 	Auth   AuthConfig   `mapstructure:"jwt"`
 	DB     DbConfig     `mapstructure:"database"`
 	Server ServerConfig `mapstructure:"server"`
+	Redis  RedisConfig  `mapstructure:"redis"`
 }
 
 type AuthConfig struct {
@@ -35,6 +36,13 @@ type DbConfig struct {
 type ServerConfig struct {
 	Port int    `mapstructure:"port"`
 	Mode string `mapstructure:"mode"`
+}
+
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Password string `mapstructure:"password"`
+	Db       int    `mapstructure:"db"`
 }
 
 func LoadConfig(path string) (*Config, error) {

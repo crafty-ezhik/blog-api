@@ -74,11 +74,25 @@ func (h *AuthHandlerImpl) LogoutAll(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandlerImpl) Refresh(c *fiber.Ctx) error {
-	resfreshToken := c.Cookies("refresh_token")
-	if resfreshToken == "" {
+	refreshToken := c.Cookies("refresh_token")
+	if refreshToken == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"success": false,
-			"err":     jwt.ErrTokenNotFound,
+			"err":     jwt.ErrInBlackList,
 		})
 	}
+	tokens, cookie, err := h.AuthService.Refresh(refreshToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"err":     err.Error(),
+		})
+	}
+	// Передаем refresh токен в куки
+	c.Cookie(cookie)
+
+	// Отдаем новый access токен пользователю
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"access_token": tokens.AccessToken,
+	})
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/internal/user"
 	cjwt "github.com/crafty-ezhik/blog-api/pkg/jwt"
+	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -17,7 +18,7 @@ const (
 type AuthService interface {
 	Register(data *RegisterRequest) (bool, error)
 	Login(data *LoginRequest) (*LoginResponse, error)
-	Refresh(tokenStr string) (*cjwt.Tokens, error)
+	Refresh(tokenStr string) (*cjwt.Tokens, *fiber.Cookie, error)
 	Logout(tokenStr string) error
 }
 
@@ -53,6 +54,7 @@ func (s *AuthServiceimpl) Login(data *LoginRequest) (*LoginResponse, error) {
 		return nil, err
 	}
 
+	// TODO: Добавить refresh в cookie
 	output := &LoginResponse{AccessToken: accessToken, RefreshToken: refreshToken}
 
 	return output, nil
@@ -81,8 +83,21 @@ func (s *AuthServiceimpl) Register(data *RegisterRequest) (bool, error) {
 	return true, nil
 }
 
-func (s *AuthServiceimpl) Refresh(tokenStr string) (*cjwt.Tokens, error) {
-	return s.jwtAuth.Refresh(tokenStr)
+func (s *AuthServiceimpl) Refresh(tokenStr string) (*cjwt.Tokens, *fiber.Cookie, error) {
+	tokens, err := s.jwtAuth.Refresh(tokenStr)
+	if err != nil {
+		return nil, nil, err
+	}
+	cookie := new(fiber.Cookie)
+	cookie.Name = "refresh_token"
+	cookie.Value = tokens.RefreshToken
+	cookie.Path = "/"
+	cookie.MaxAge = int(s.cfg.Auth.RefreshTTL.Seconds())
+	cookie.SameSite = fiber.CookieSameSiteLaxMode
+	cookie.HTTPOnly = true
+	cookie.Secure = true
+
+	return tokens, cookie, nil
 }
 
 func (s *AuthServiceimpl) Logout(tokenStr string) error {

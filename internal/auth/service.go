@@ -9,38 +9,46 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	ErrUserExisted        = "the user with this email already exists"
+	ErrInvalidCredentials = "invalid credentials"
+)
+
 type AuthService interface {
 	Register(data *RegisterRequest) (bool, error)
 	Login(data *LoginRequest) (*LoginResponse, error)
+	Refresh(tokenStr string) (*cjwt.Tokens, error)
+	Logout(tokenStr string) error
 }
 
 type AuthServiceimpl struct {
 	cfg      *config.Config
+	jwtAuth  *cjwt.JWT
 	UserRepo user.UserRepository
 }
 
-func NewAuthService(cfg *config.Config, userRepo user.UserRepository) *AuthServiceimpl {
-	return &AuthServiceimpl{cfg: cfg, UserRepo: userRepo}
+func NewAuthService(cfg *config.Config, userRepo user.UserRepository, jwtAuth *cjwt.JWT) *AuthServiceimpl {
+	return &AuthServiceimpl{cfg: cfg, UserRepo: userRepo, jwtAuth: jwtAuth}
 }
 
 func (s *AuthServiceimpl) Login(data *LoginRequest) (*LoginResponse, error) {
 	existedUser, err := s.UserRepo.FindByEmail(data.Email)
 	if err != nil || existedUser == nil {
-		return nil, errors.New("invalid credentials")
+		return nil, errors.New(ErrInvalidCredentials)
 	}
 
 	hashedPassword := existedUser.Password
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(data.Password))
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, errors.New(ErrInvalidCredentials)
 	}
 
-	accessToken, err := cjwt.GenerateToken(s.cfg.Auth.SigningKey, existedUser.ID, s.cfg.Auth.AccessTTL)
+	accessToken, err := s.jwtAuth.GenerateToken(existedUser.ID, cjwt.Access)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := cjwt.GenerateToken(s.cfg.Auth.SigningKey, existedUser.ID, s.cfg.Auth.RefreshTTL)
+	refreshToken, err := s.jwtAuth.GenerateToken(existedUser.ID, cjwt.Refresh)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +61,7 @@ func (s *AuthServiceimpl) Login(data *LoginRequest) (*LoginResponse, error) {
 func (s *AuthServiceimpl) Register(data *RegisterRequest) (bool, error) {
 	existedUser, _ := s.UserRepo.FindByEmail(data.Email)
 	if existedUser != nil {
-		return false, errors.New("the user with this email already exists")
+		return false, errors.New(ErrUserExisted)
 	}
 	hashedPass, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -74,5 +82,9 @@ func (s *AuthServiceimpl) Register(data *RegisterRequest) (bool, error) {
 }
 
 func (s *AuthServiceimpl) Refresh(tokenStr string) (*cjwt.Tokens, error) {
-	return cjwt.Refresh(tokenStr, s.cfg.Auth.SigningKey, s.cfg.Auth.AccessTTL, s.cfg.Auth.RefreshTTL)
+	return s.jwtAuth.Refresh(tokenStr)
+}
+
+func (s *AuthServiceimpl) Logout(tokenStr string) error {
+	return s.jwtAuth.Logout(tokenStr)
 }

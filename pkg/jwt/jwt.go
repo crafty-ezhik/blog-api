@@ -6,12 +6,39 @@ import (
 	"time"
 )
 
+type TokenType int
+
+const (
+	Access TokenType = iota
+	Refresh
+)
+
 const (
 	ErrUnexpectedSigningMethod = "unexpected signing method"
 	ErrInvalidToken            = "invalid token"
 	ErrTokenNotFound           = "token not found"
-	ErrTokenExpired            = "token expired"
+	ErrSessionExpired          = "session expired"
+	ErrInternalServer          = "internal server error"
+	ErrRefreshExpired          = "refresh token expired due to logout / password change"
+	ErrUnknownTokenType        = "unknown token type"
+	ErrInBlackList             = "refresh token revoked or not found"
 )
+
+type JWT struct {
+	jwtService *JWTService
+	accessTTL  time.Duration
+	refreshTTL time.Duration
+	signingKey string
+}
+
+func NewJWT(jwtService *JWTService, accessTTL, refreshTTL time.Duration, signingKey string) *JWT {
+	return &JWT{
+		jwtService: jwtService,
+		accessTTL:  accessTTL,
+		refreshTTL: refreshTTL,
+		signingKey: signingKey,
+	}
+}
 
 type JWTData struct {
 	UserId  uint  `json:"user_id"`
@@ -24,44 +51,80 @@ type Tokens struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-func GenerateToken(signingKey string, userID uint, ttl time.Duration) (string, error) {
+func (j *JWT) GenerateToken(userID uint, tokenType TokenType) (string, error) {
+	currentVersion, err := j.jwtService.versioner.GetVersion(userID)
+	if err != nil {
+		// TODO: Добавить логирование ошибки
+		return "", err
+	}
+
 	claims := jwt.MapClaims{
 		"user_id": userID,
-		"exp":     time.Now().Add(ttl).Unix(),
-		"iat":     1,
-		"version": 0, // TODO:  Сделать получение из Redis
+		"iat":     time.Now().Unix(),
+		"version": currentVersion,
+	}
+
+	switch tokenType {
+	case Access:
+		claims["exp"] = time.Now().Add(j.accessTTL).Unix()
+	case Refresh:
+		claims["exp"] = time.Now().Add(j.refreshTTL).Unix()
+	default:
+		return "", errors.New(ErrUnknownTokenType)
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signedToken, err := token.SignedString([]byte(signingKey))
+	signedToken, err := token.SignedString([]byte(j.signingKey))
 	if err != nil {
+		// TODO: Добавить логирование ошибки
 		return "", err
 	}
 	return signedToken, nil
 }
 
-func VerifyToken(tokenString, signingKey string) (*JWTData, error) {
+func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New(ErrUnexpectedSigningMethod)
 		}
-		return []byte(signingKey), nil
+		return []byte(j.signingKey), nil
 	})
 	if err != nil {
+		// TODO: Добавить логирование ошибки
 		return nil, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
+		// TODO: Добавить логирование ошибки
 		return nil, errors.New(ErrInvalidToken)
 	}
 
+	// Получение UserID
 	userID, ok := claims["user_id"].(uint)
 	if !ok {
+		// TODO: Добавить логирование ошибки
 		return nil, errors.New(ErrInvalidToken)
 	}
-	exp := int64(claims["exp"].(float64))
+
+	// Получение и проверка версии
 	version := uint(claims["version"].(float64))
+	currentVersion, err := j.jwtService.versioner.GetVersion(userID)
+	if err != nil {
+		// TODO: Добавить логирование ошибки
+		return nil, errors.New(ErrInternalServer)
+	}
+	if version < currentVersion {
+		// TODO: Добавить логирование ошибки
+		return nil, errors.New(ErrRefreshExpired)
+	}
+
+	// Получение и проверка exp
+	exp := int64(claims["exp"].(float64))
+	if time.Now().Unix() > exp {
+		// TODO: Добавить логирование ошибки
+		return nil, errors.New(ErrSessionExpired)
+	}
 
 	return &JWTData{
 		UserId:  userID,
@@ -70,32 +133,76 @@ func VerifyToken(tokenString, signingKey string) (*JWTData, error) {
 	}, nil
 }
 
-func Refresh(refreshToken, signingKey string, accessTTL, refreshTTL time.Duration) (*Tokens, error) {
-	tokenData, err := VerifyToken(refreshToken, signingKey)
+func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
+	// Надо проверить не черном ли списке токен
+	if ok, err := j.jwtService.blackLister.IsBlackListed(refreshToken); err != nil || !ok {
+		// TODO: Добавить логирование ошибки
+		return nil, errors.New(ErrInBlackList)
+	}
+
+	// Парсинг токена
+	tokenData, err := j.VerifyToken(refreshToken)
 	if err != nil {
+		// TODO: Добавить логирование ошибки
 		return nil, err
 	}
-	// Надо проверить exp
-
-	// Надо проверить версию
 
 	// Генерация новой пары ключей
-	newAccessToken, err := GenerateToken(signingKey, tokenData.UserId, accessTTL)
+	newAccessToken, err := j.GenerateToken(tokenData.UserId, Access)
 	if err != nil {
+		// TODO: Добавить логирование ошибки
 		return nil, err
 	}
-	newRefreshToken, err := GenerateToken(signingKey, tokenData.UserId, refreshTTL)
+	newRefreshToken, err := j.GenerateToken(tokenData.UserId, Refresh)
 	if err != nil {
+		// TODO: Добавить логирование ошибки
 		return nil, err
 	}
 
 	// Добавление старого refresh токена в BlackList
+	err = j.jwtService.blackLister.AddToBlackList(refreshToken, time.Until(time.Unix(tokenData.Exp, 0)))
+	if err != nil {
+		// TODO: Добавить логирование ошибки
+		return nil, err
+	}
 
 	// Увеличение версии токена
+	err = j.jwtService.versioner.IncrementVersion(tokenData.UserId)
+	if err != nil {
+		// TODO: Добавить логирование ошибки
+		return nil, err
+	}
 
 	// Возврат значений
 	return &Tokens{
 		AccessToken:  newAccessToken,
 		RefreshToken: newRefreshToken,
 	}, nil
+}
+
+func (j *JWT) Logout(refreshToken string) error {
+	if ok, err := j.jwtService.blackLister.IsBlackListed(refreshToken); err != nil || !ok {
+		// TODO: Добавить логирование ошибки
+		return errors.New(ErrInBlackList)
+	}
+
+	// Парсинг токена
+	tokenData, err := j.VerifyToken(refreshToken)
+	if err != nil {
+		// TODO: Добавить логирование ошибки
+		return err
+	}
+
+	err = j.jwtService.versioner.IncrementVersion(tokenData.UserId)
+	if err != nil {
+		// TODO: Добавить логирование ошибки
+		return errors.New(ErrInternalServer)
+	}
+
+	err = j.jwtService.blackLister.AddToBlackList(refreshToken, time.Until(time.Unix(tokenData.Exp, 0)))
+	if err != nil {
+		// TODO: Добавить логирование ошибки
+		return errors.New(ErrInternalServer)
+	}
+	return nil
 }

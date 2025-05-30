@@ -17,7 +17,7 @@ const (
 
 type AuthService interface {
 	Register(data *RegisterRequest) (bool, error)
-	Login(data *LoginRequest) (*LoginResponse, error)
+	Login(data *LoginRequest) (*LoginResponse, *fiber.Cookie, error)
 	Refresh(tokenStr string) (*cjwt.Tokens, *fiber.Cookie, error)
 	Logout(tokenStr string) (*fiber.Cookie, error)
 }
@@ -32,32 +32,40 @@ func NewAuthService(cfg *config.Config, userRepo user.UserRepository, jwtAuth *c
 	return &AuthServiceimpl{cfg: cfg, UserRepo: userRepo, jwtAuth: jwtAuth}
 }
 
-func (s *AuthServiceimpl) Login(data *LoginRequest) (*LoginResponse, error) {
+func (s *AuthServiceimpl) Login(data *LoginRequest) (*LoginResponse, *fiber.Cookie, error) {
 	existedUser, err := s.UserRepo.FindByEmail(data.Email)
 	if err != nil || existedUser == nil {
-		return nil, errors.New(ErrInvalidCredentials)
+		return nil, nil, errors.New(ErrInvalidCredentials)
 	}
 
 	hashedPassword := existedUser.Password
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(data.Password))
 	if err != nil {
-		return nil, errors.New(ErrInvalidCredentials)
+		return nil, nil, errors.New(ErrInvalidCredentials)
 	}
 
 	accessToken, err := s.jwtAuth.GenerateToken(existedUser.ID, cjwt.Access)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	refreshToken, err := s.jwtAuth.GenerateToken(existedUser.ID, cjwt.Refresh)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// TODO: Добавить refresh в cookie
+	cookie := new(fiber.Cookie)
+	cookie.Name = "refresh_token"
+	cookie.Value = refreshToken
+	cookie.Path = "/"
+	cookie.MaxAge = int(s.cfg.Auth.RefreshTTL.Seconds())
+	cookie.SameSite = fiber.CookieSameSiteLaxMode
+	cookie.HTTPOnly = true
+	cookie.Secure = true
+
 	output := &LoginResponse{AccessToken: accessToken, RefreshToken: refreshToken}
 
-	return output, nil
+	return output, cookie, nil
 }
 
 func (s *AuthServiceimpl) Register(data *RegisterRequest) (bool, error) {

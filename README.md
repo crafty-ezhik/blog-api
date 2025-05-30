@@ -67,7 +67,7 @@
 ## ⚙️ Установка и запуск
 ### Docker-compose
 ```cmd
-docker-compose -up build -d
+docker-compose up --build -d
 ```
 
 ### Настройка окружения

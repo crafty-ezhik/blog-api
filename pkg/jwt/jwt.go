@@ -17,7 +17,7 @@ type JWTData struct {
 	Version uint   `json:"version"`
 }
 
-func GenerateAccessToken(signingKey string, userID uint, ttl time.Duration) (string, error) {
+func GenerateToken(signingKey string, userID uint, ttl time.Duration) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(ttl).Unix(),
@@ -48,7 +48,7 @@ func VerifyToken(tokenString, signingKey string) (*JWTData, error) {
 	if !ok || !token.Valid {
 		return nil, errors.New(ErrInvalidToken)
 	}
-	
+
 	userID, ok := claims["user_id"].(string)
 	if !ok {
 		return nil, errors.New(ErrInvalidToken)

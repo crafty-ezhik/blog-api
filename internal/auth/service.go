@@ -5,6 +5,7 @@ import (
 	"github.com/crafty-ezhik/blog-api/internal/config"
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/internal/user"
+	cjwt "github.com/crafty-ezhik/blog-api/pkg/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,14 +28,22 @@ func (s *AuthServiceimpl) Login(data *LoginRequest) (*LoginResponse, error) {
 	if err != nil || existedUser == nil {
 		return nil, errors.New("invalid credentials")
 	}
+
 	hashedPassword := existedUser.Password
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(data.Password))
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
-	// TODO: Сделать генерацию токенов
-	accessToken := "1"
-	refreshToken := "1"
+
+	accessToken, err := cjwt.GenerateToken(s.cfg.Auth.SigningKey, existedUser.ID, s.cfg.Auth.AccessTTL)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := cjwt.GenerateToken(s.cfg.Auth.SigningKey, existedUser.ID, s.cfg.Auth.RefreshTTL)
+	if err != nil {
+		return nil, err
+	}
 
 	output := &LoginResponse{AccessToken: accessToken, RefreshToken: refreshToken}
 

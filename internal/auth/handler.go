@@ -2,6 +2,7 @@ package auth
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/user"
+	"github.com/crafty-ezhik/blog-api/pkg/jwt"
 	"github.com/crafty-ezhik/blog-api/pkg/req"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
 	"github.com/gofiber/fiber/v2"
@@ -73,5 +74,11 @@ func (h *AuthHandlerImpl) LogoutAll(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandlerImpl) Refresh(c *fiber.Ctx) error {
-	return nil
+	resfreshToken := c.Cookies("refresh_token")
+	if resfreshToken == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"err":     jwt.ErrTokenNotFound,
+		})
+	}
 }

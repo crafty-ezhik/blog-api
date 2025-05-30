@@ -72,3 +72,7 @@ func (s *AuthServiceimpl) Register(data *RegisterRequest) (bool, error) {
 	}
 	return true, nil
 }
+
+func (s *AuthServiceimpl) Refresh(tokenStr string) (*cjwt.Tokens, error) {
+	return cjwt.Refresh(tokenStr, s.cfg.Auth.SigningKey, s.cfg.Auth.AccessTTL, s.cfg.Auth.RefreshTTL)
+}

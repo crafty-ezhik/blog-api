@@ -88,7 +88,7 @@ func main() {
 	//
 	routeDeps := routes.RouteDeps{
 		AuthHandler: authHandler,
-		JWT *jwt.JWT
+		JWT:         jwtAuth,
 	}
 
 	routes.SetupRoutes(app, routeDeps)

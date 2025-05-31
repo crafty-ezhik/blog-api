@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bytedance/sonic"
 	db2 "github.com/crafty-ezhik/blog-api/db"
 	"github.com/crafty-ezhik/blog-api/internal/auth"
 	"github.com/crafty-ezhik/blog-api/internal/config"
@@ -50,14 +51,6 @@ func main() {
 		Validator: myValidator,
 	}
 
-	// Init Fiber App
-	app := fiber.New(fiber.Config{
-
-		// TODO: Добавить логирование через ZAP
-		// TODO: Подключить Swagger
-		// TODO: Поменять JSON Decoder/Encoder с encoding/json на bytedance/sonic
-	})
-
 	// Repositories
 	userRepo := user.NewUserRepository(db)
 
@@ -68,10 +61,19 @@ func main() {
 	// Handlers
 	authHandler := auth.NewAuthHandler(userService, authService, v)
 
+	// Init Fiber App
+	app := fiber.New(fiber.Config{
+		JSONDecoder: sonic.Unmarshal,
+		JSONEncoder: sonic.Marshal,
+		// TODO: Добавить логирование через ZAP
+		// TODO: Подключить Swagger
+	})
+
 	//
 	routeDeps := routes.RouteDeps{
 		AuthHandler: authHandler,
 	}
+
 	routes.SetupRoutes(app, routeDeps)
 
 	// Start app

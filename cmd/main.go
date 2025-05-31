@@ -10,6 +10,7 @@ import (
 	"github.com/crafty-ezhik/blog-api/internal/user"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
+	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -81,9 +82,13 @@ func main() {
 		// TODO: Подключить Swagger
 	})
 
+	// Middleware для логирование запросов
+	app.Use(middleware.LogMiddleware())
+
 	//
 	routeDeps := routes.RouteDeps{
 		AuthHandler: authHandler,
+		JWT *jwt.JWT
 	}
 
 	routes.SetupRoutes(app, routeDeps)

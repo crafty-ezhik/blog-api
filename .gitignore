@@ -26,3 +26,4 @@ go.work.sum
 .idea
 configs/dev.yaml
 configs/prod.yaml
+log

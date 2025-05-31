@@ -21,3 +21,8 @@ redis:
   port: port
   password: #use .env file
   db: 0
+
+log:
+  mode: debug # or info,warn,err
+  encoding: console # or json
+  output_path: ["stdout", "/log/app.log"]

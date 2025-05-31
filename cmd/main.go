@@ -14,6 +14,7 @@ import (
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/redis/go-redis/v9"
 	"log"
 )
@@ -85,6 +86,12 @@ func main() {
 	// Middleware для логирование запросов
 	app.Use(middleware.LogMiddleware())
 
+	// CORS Middleware
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "https://gofiber.io, https://gofiber.net, http://localhost",
+		AllowHeaders: "Origin, Content-Type, Accept",
+		AllowMethods: "GET, POST, PUT, PATCH, DELETE",
+	}))
 	//
 	routeDeps := routes.RouteDeps{
 		AuthHandler: authHandler,

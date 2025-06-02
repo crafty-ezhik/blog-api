@@ -5,7 +5,9 @@ import (
 	"github.com/bytedance/sonic"
 	db2 "github.com/crafty-ezhik/blog-api/db"
 	"github.com/crafty-ezhik/blog-api/internal/auth"
+	"github.com/crafty-ezhik/blog-api/internal/comment"
 	"github.com/crafty-ezhik/blog-api/internal/config"
+	"github.com/crafty-ezhik/blog-api/internal/post"
 	"github.com/crafty-ezhik/blog-api/internal/routes"
 	"github.com/crafty-ezhik/blog-api/internal/user"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
@@ -64,23 +66,26 @@ func main() {
 	// Repositories
 	logger.Log.Debug("Инициализация репозиториев")
 	userRepo := user.NewUserRepository(db)
+	postRepo := post.NewPostRepository(db)
+	commentRepo := comment.NewCommentRepository(db)
 
 	// Services
 	logger.Log.Debug("Инициализация сервисов")
 	userService := user.NewUserService(userRepo)
 	authService := auth.NewAuthService(cfg, userRepo, jwtAuth)
+	postService := post.NewPostService(postRepo)
 
 	// Handlers
 	logger.Log.Debug("Инициализация хендлеров")
 	authHandler := auth.NewAuthHandler(userService, authService, v)
 	userHandler := user.NewUserHandler(userService, v)
+	postHandler := post.NewPostHandler(postService)
 
 	// Init Fiber App
 	logger.Log.Debug("Инициализация fiber")
 	app := fiber.New(fiber.Config{
 		JSONDecoder: sonic.Unmarshal,
 		JSONEncoder: sonic.Marshal,
-		// TODO: Добавить логирование через ZAP
 		// TODO: Подключить Swagger
 	})
 
@@ -97,6 +102,7 @@ func main() {
 	routeDeps := routes.RouteDeps{
 		AuthHandler: authHandler,
 		UserHandler: userHandler,
+		PostHandler: postHandler,
 		JWT:         jwtAuth,
 	}
 

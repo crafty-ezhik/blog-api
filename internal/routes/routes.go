@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/auth"
+	"github.com/crafty-ezhik/blog-api/internal/post"
 	"github.com/crafty-ezhik/blog-api/internal/user"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
@@ -11,6 +12,7 @@ import (
 type RouteDeps struct {
 	AuthHandler auth.AuthHandler
 	UserHandler user.UserHandler
+	PostHandler post.PostHandler
 	JWT         *jwt.JWT
 }
 

@@ -15,3 +15,9 @@ type CommentRepository interface {
 type CommentRepositoryImpl struct {
 	db *gorm.DB
 }
+
+func NewCommentRepository(db *gorm.DB) *CommentRepositoryImpl {
+	return &CommentRepositoryImpl{
+		db: db,
+	}
+}

@@ -36,7 +36,7 @@ func (repo *PostRepositoryImpl) FindByID(postID uint) (*models.Post, error) {
 }
 
 func (repo *PostRepositoryImpl) Create(post *models.Post) error {
-	return repo.db.Create(&post).Error
+	return repo.db.Create(post).Error
 }
 
 func (repo *PostRepositoryImpl) Update(postID uint, updatedFields *models.Post) error {

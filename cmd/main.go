@@ -67,7 +67,7 @@ func main() {
 	logger.Log.Debug("Инициализация репозиториев")
 	userRepo := user.NewUserRepository(db)
 	postRepo := post.NewPostRepository(db)
-	commentRepo := comment.NewCommentRepository(db)
+	_ = comment.NewCommentRepository(db)
 
 	// Services
 	logger.Log.Debug("Инициализация сервисов")
@@ -79,7 +79,7 @@ func main() {
 	logger.Log.Debug("Инициализация хендлеров")
 	authHandler := auth.NewAuthHandler(userService, authService, v)
 	userHandler := user.NewUserHandler(userService, v)
-	postHandler := post.NewPostHandler(postService)
+	postHandler := post.NewPostHandler(postService, v)
 
 	// Init Fiber App
 	logger.Log.Debug("Инициализация fiber")

@@ -41,11 +41,11 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 
 	// Posts
 	api.Route("posts", func(router fiber.Router) {
-		router.Post("/", pass)      // Создание статьи
-		router.Get("/", pass)       // Получение всех статей
-		router.Get("/:id", pass)    // Получение конкретной статьи
-		router.Put("/:id", pass)    // Обновление статьи
-		router.Delete("/:id", pass) // Удаление статьи
+		router.Post("/", deps.PostHandler.CreatePost)      // Создание статьи
+		router.Get("/", deps.PostHandler.GetAllPosts)      // Получение всех статей
+		router.Get("/:id", deps.PostHandler.GetPostById)   // Получение конкретной статьи
+		router.Put("/:id", deps.PostHandler.UpdatePost)    // Обновление статьи
+		router.Delete("/:id", deps.PostHandler.DeletePost) // Удаление статьи
 
 		router.Get("/:id/comments", pass)               // Получение всех комментариев к статье
 		router.Post("/:id/comments", pass)              // Создание комментария к посту

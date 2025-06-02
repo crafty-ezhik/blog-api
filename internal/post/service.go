@@ -1,11 +1,13 @@
 package post
 
+import "github.com/crafty-ezhik/blog-api/internal/models"
+
 type PostService interface {
-	GetAllPosts() error
-	GetPostById() error
-	CreatePost() error
-	UpdatePost() error
-	DeletePost() error
+	GetAllPosts() ([]models.Post, error)
+	GetPostById(postID uint) (*models.Post, error)
+	CreatePost(post *models.Post) error
+	UpdatePost(postID uint, updatedFields *models.Post) error
+	DeletePost(postID uint) error
 }
 
 type PostServiceImpl struct {
@@ -16,4 +18,24 @@ func NewPostService(postRepo PostRepository) *PostServiceImpl {
 	return &PostServiceImpl{
 		PostRepo: postRepo,
 	}
+}
+
+func (s *PostServiceImpl) GetAllPosts() ([]models.Post, error) {
+	return s.PostRepo.FindALL()
+}
+
+func (s *PostServiceImpl) GetPostById(postID uint) (*models.Post, error) {
+	return s.PostRepo.FindByID(postID)
+}
+
+func (s *PostServiceImpl) CreatePost(post *models.Post) error {
+	return s.PostRepo.Create(post)
+}
+
+func (s *PostServiceImpl) UpdatePost(postID uint, updatedFields *models.Post) error {
+	return s.PostRepo.Update(postID, updatedFields)
+}
+
+func (s *PostServiceImpl) DeletePost(postID uint) error {
+	return s.PostRepo.Delete(postID)
 }

@@ -9,7 +9,7 @@ type UserRepository interface {
 	FindByID(userId uint) (*models.User, error)
 	FindByEmail(email string) (*models.User, error)
 	Create(user *models.User) error
-	Update(user *models.User) error
+	Update(userID uint, updateField *models.User) error
 	Delete(userID uint) error
 }
 
@@ -23,7 +23,7 @@ func NewUserRepository(db *gorm.DB) *UserRepositoryImpl {
 
 func (repo *UserRepositoryImpl) FindByID(userId uint) (*models.User, error) {
 	var user *models.User
-	result := repo.db.First(user, userId)
+	result := repo.db.Where("id = ?", userId).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -43,10 +43,10 @@ func (repo *UserRepositoryImpl) Create(user *models.User) error {
 	return repo.db.Create(user).Error
 }
 
-func (repo *UserRepositoryImpl) Update(user *models.User) error {
-	return repo.db.Save(user).Error
+func (repo *UserRepositoryImpl) Update(userID uint, updateField *models.User) error {
+	return repo.db.Model(&models.User{ID: userID}).Updates(updateField).Error
 }
 
 func (repo *UserRepositoryImpl) Delete(userID uint) error {
-	return repo.db.Delete(&userID).Error
+	return repo.db.Delete(&models.User{}, &userID).Error
 }

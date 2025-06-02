@@ -73,6 +73,7 @@ func main() {
 	// Handlers
 	logger.Log.Debug("Инициализация хендлеров")
 	authHandler := auth.NewAuthHandler(userService, authService, v)
+	userHandler := user.NewUserHandler(userService, v)
 
 	// Init Fiber App
 	logger.Log.Debug("Инициализация fiber")
@@ -95,6 +96,7 @@ func main() {
 	//
 	routeDeps := routes.RouteDeps{
 		AuthHandler: authHandler,
+		UserHandler: userHandler,
 		JWT:         jwtAuth,
 	}
 

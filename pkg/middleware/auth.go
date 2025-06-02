@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+type KeyType string
+
+var UserIDKey KeyType = "user_id"
+
 func AuthMiddleware(jwt *jwt.JWT) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		rawToken := c.Get("Authorization")
@@ -30,7 +34,7 @@ func AuthMiddleware(jwt *jwt.JWT) fiber.Handler {
 				"details": err.Error(),
 			})
 		}
-		c.Locals("user_id", tokenData.UserId)
+		c.Locals(UserIDKey, tokenData.UserId)
 		return c.Next()
 	}
 }

@@ -6,7 +6,7 @@ type UserService interface {
 	GetByID(userID uint) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
 	Create(user *models.User) error
-	Update(user *models.User) error
+	Update(userID uint, updatedFields *models.User) error
 	Delete(userID uint) error
 }
 
@@ -30,8 +30,8 @@ func (s *UserServiceImpl) Create(user *models.User) error {
 	return s.UserRepo.Create(user)
 }
 
-func (s *UserServiceImpl) Update(user *models.User) error {
-	return s.UserRepo.Update(user)
+func (s *UserServiceImpl) Update(userID uint, updatedFields *models.User) error {
+	return s.UserRepo.Update(userID, updatedFields)
 }
 
 func (s *UserServiceImpl) Delete(userID uint) error {

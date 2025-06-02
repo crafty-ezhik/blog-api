@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/auth"
+	"github.com/crafty-ezhik/blog-api/internal/user"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/gofiber/fiber/v2"
@@ -9,6 +10,7 @@ import (
 
 type RouteDeps struct {
 	AuthHandler auth.AuthHandler
+	UserHandler user.UserHandler
 	JWT         *jwt.JWT
 }
 
@@ -25,10 +27,13 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 
 	// Users
 	api.Route("users", func(router fiber.Router) {
-		router.Get("/me", middleware.AuthMiddleware(deps.JWT), pass)       // TODO: Нужна проверка access токена
+		router.Get("/me", middleware.AuthMiddleware(deps.JWT), deps.UserHandler.GetMe) // TODO: Нужна проверка access токена
+		router.Get("/:id", middleware.AuthMiddleware(deps.JWT), deps.UserHandler.GetByID)
+		router.Patch("/me", middleware.AuthMiddleware(deps.JWT), deps.UserHandler.Update)
+		router.Delete("/:id", middleware.AuthMiddleware(deps.JWT), deps.UserHandler.Delete)
 		router.Get("/my/posts", middleware.AuthMiddleware(deps.JWT), pass) // Получение постов пользователя
-		router.Get("/:id/posts", pass)                                     // Получение постов по id пользователя
 		router.Get("/my/posts/:postId/comments", pass)                     // Получение всех своих комментариев к статье
+		router.Get("/:id/posts", pass)                                     // Получение постов по id пользователя
 		router.Get("/:id/posts/:postId/comments", pass)                    // Получение всех комментариев к статье по id пользователя
 	})
 

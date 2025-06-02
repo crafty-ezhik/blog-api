@@ -23,18 +23,18 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 		router.Post("/refresh", middleware.AuthMiddleware(deps.JWT), deps.AuthHandler.Refresh) // TODO: Нужна проверка refresh токена
 	})
 
-	api := app.Group("/api")
+	api := app.Group("/api", middleware.AuthMiddleware(deps.JWT))
 
 	// Users
 	api.Route("users", func(router fiber.Router) {
-		router.Get("/me", middleware.AuthMiddleware(deps.JWT), deps.UserHandler.GetMe) // TODO: Нужна проверка access токена
-		router.Get("/:id", middleware.AuthMiddleware(deps.JWT), deps.UserHandler.GetByID)
-		router.Patch("/me", middleware.AuthMiddleware(deps.JWT), deps.UserHandler.Update)
-		router.Delete("/:id", middleware.AuthMiddleware(deps.JWT), deps.UserHandler.Delete)
-		router.Get("/my/posts", middleware.AuthMiddleware(deps.JWT), pass) // Получение постов пользователя
-		router.Get("/my/posts/:postId/comments", pass)                     // Получение всех своих комментариев к статье
-		router.Get("/:id/posts", pass)                                     // Получение постов по id пользователя
-		router.Get("/:id/posts/:postId/comments", pass)                    // Получение всех комментариев к статье по id пользователя
+		router.Get("/me", deps.UserHandler.GetMe) // TODO: Нужна проверка access токена
+		router.Get("/:id", deps.UserHandler.GetByID)
+		router.Patch("/me", deps.UserHandler.Update)
+		router.Delete("/:id", deps.UserHandler.Delete)
+		router.Get("/my/posts", deps.UserHandler.GetMyPostsByID)                            // Получение постов пользователя
+		router.Get("/my/posts/:postId/comments", deps.UserHandler.GetMyCommentsByPostID)    // Получение всех своих комментариев к статье
+		router.Get("/:id/posts", deps.UserHandler.GetUserPostsByID)                         // Получение постов по id пользователя
+		router.Get("/:id/posts/:postId/comments", deps.UserHandler.GetUserCommentsByPostID) // Получение всех комментариев к статье по id пользователя
 	})
 
 	// Posts

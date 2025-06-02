@@ -14,6 +14,11 @@ type UserHandler interface {
 	GetMe(c *fiber.Ctx) error
 	Update(c *fiber.Ctx) error
 	Delete(c *fiber.Ctx) error
+
+	GetMyPostsByID(c *fiber.Ctx) error
+	GetUserPostsByID(c *fiber.Ctx) error
+	GetMyCommentsByPostID(c *fiber.Ctx) error
+	GetUserCommentsByPostID(c *fiber.Ctx) error
 }
 
 type UserHandlerImpl struct {
@@ -28,6 +33,7 @@ func NewUserHandler(userService UserService, validator *validate.XValidator) *Us
 	}
 }
 
+// region:Операции с пользователем
 func (h *UserHandlerImpl) GetByID(c *fiber.Ctx) error {
 	// Если нет параметров пути, то выводится данные под которыми выполнен вход
 	id, err := strconv.ParseUint(c.Params("id"), 10, 32)
@@ -135,3 +141,39 @@ func (h *UserHandlerImpl) Delete(c *fiber.Ctx) error {
 		"message": "User deleted",
 	})
 }
+
+// endregion
+
+// region: Операции с пользователем, постами и комментариями
+func (h *UserHandlerImpl) GetMyPostsByID(c *fiber.Ctx) error {
+	userID := c.Locals(middleware.UserIDKey).(uint)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"data":    userID,
+	})
+}
+
+func (h *UserHandlerImpl) GetUserPostsByID(c *fiber.Ctx) error {
+	userId, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "id must be an integer",
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"data":    userId,
+	})
+}
+
+func (h *UserHandlerImpl) GetMyCommentsByPostID(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
+}
+
+func (h *UserHandlerImpl) GetUserCommentsByPostID(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
+}
+
+// endregion

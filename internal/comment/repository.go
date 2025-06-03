@@ -2,6 +2,7 @@ package comment
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -17,6 +18,7 @@ type CommentRepositoryImpl struct {
 }
 
 func NewCommentRepository(db *gorm.DB) *CommentRepositoryImpl {
+	logger.Log.Debug("Init comment repository")
 	return &CommentRepositoryImpl{
 		db: db,
 	}

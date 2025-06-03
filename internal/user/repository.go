@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -18,6 +19,7 @@ type UserRepositoryImpl struct {
 }
 
 func NewUserRepository(db *gorm.DB) *UserRepositoryImpl {
+	logger.Log.Debug("Init user repository")
 	return &UserRepositoryImpl{db: db}
 }
 

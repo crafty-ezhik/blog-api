@@ -1,6 +1,9 @@
 package post
 
-import "github.com/crafty-ezhik/blog-api/internal/models"
+import (
+	"github.com/crafty-ezhik/blog-api/internal/models"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
+)
 
 type PostService interface {
 	GetAllPosts() ([]models.Post, error)
@@ -16,6 +19,7 @@ type PostServiceImpl struct {
 }
 
 func NewPostService(postRepo PostRepository) *PostServiceImpl {
+	logger.Log.Debug("Init post service")
 	return &PostServiceImpl{
 		PostRepo: postRepo,
 	}

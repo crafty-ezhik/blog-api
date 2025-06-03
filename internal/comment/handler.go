@@ -3,6 +3,7 @@ package comment
 import (
 	"errors"
 	"fmt"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/crafty-ezhik/blog-api/pkg/req"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
@@ -26,6 +27,7 @@ type CommentHandlerImpl struct {
 }
 
 func NewCommentHandler(commentService CommentService, validator *validate.XValidator) *CommentHandlerImpl {
+	logger.Log.Debug("Init comment handler")
 	return &CommentHandlerImpl{
 		CommentService: commentService,
 		v:              validator,

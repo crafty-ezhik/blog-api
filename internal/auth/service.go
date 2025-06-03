@@ -6,6 +6,7 @@ import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/internal/user"
 	cjwt "github.com/crafty-ezhik/blog-api/pkg/jwt"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -29,6 +30,7 @@ type AuthServiceimpl struct {
 }
 
 func NewAuthService(cfg *config.Config, userRepo user.UserRepository, jwtAuth *cjwt.JWT) *AuthServiceimpl {
+	logger.Log.Debug("Init auth service")
 	return &AuthServiceimpl{cfg: cfg, UserRepo: userRepo, jwtAuth: jwtAuth}
 }
 

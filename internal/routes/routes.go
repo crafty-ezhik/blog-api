@@ -6,6 +6,7 @@ import (
 	"github.com/crafty-ezhik/blog-api/internal/post"
 	"github.com/crafty-ezhik/blog-api/internal/user"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/gofiber/fiber/v2"
 )
@@ -19,6 +20,7 @@ type RouteDeps struct {
 }
 
 func SetupRoutes(app *fiber.App, deps RouteDeps) {
+	logger.Log.Debug("Setting routes...")
 	// Auth
 	app.Route("/auth", func(router fiber.Router) {
 		router.Post("/register", deps.AuthHandler.Register)
@@ -54,4 +56,6 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 		router.Patch("/:id/comments/:commentId", deps.CommentHandler.UpdateComment)  // Обновление комментария
 		router.Delete("/:id/comments/:commentId", deps.CommentHandler.DeleteComment) // Удаление комментария
 	})
+
+	logger.Log.Debug("The installation of routes was successful!")
 }

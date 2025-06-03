@@ -2,6 +2,7 @@ package post
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -19,6 +20,7 @@ type PostRepositoryImpl struct {
 }
 
 func NewPostRepository(db *gorm.DB) *PostRepositoryImpl {
+	logger.Log.Debug("Init post repository")
 	return &PostRepositoryImpl{
 		db: db,
 	}

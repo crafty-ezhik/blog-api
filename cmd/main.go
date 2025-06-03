@@ -40,11 +40,11 @@ func main() {
 		panic(err)
 	}
 	// Get database connection
-	logger.Log.Debug("Получение подключения к базе данных")
+
 	db := db2.GetConnection(cfg)
 
 	// Init redis
-	logger.Log.Debug("Инициализация Redis Client")
+	logger.Log.Debug("Init Redis Client")
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
 		Password: cfg.Redis.Password,
@@ -52,39 +52,35 @@ func main() {
 	})
 
 	// Init JWT
-	logger.Log.Debug("Инициализация модуля для JWT")
 	jwtService := jwt.NewJWTService(jwt.NewRedisStorage(rdb))
 	jwtAuth := jwt.NewJWT(jwtService, cfg.Auth.AccessTTL, cfg.Auth.RefreshTTL, cfg.Auth.SigningKey)
 
 	// Init Validator
-	logger.Log.Debug("Инициализация валидатора")
+	logger.Log.Debug("Init validator")
 	myValidator := validator.New()
 	v := &validate.XValidator{
 		Validator: myValidator,
 	}
 
 	// Repositories
-	logger.Log.Debug("Инициализация репозиториев")
 	userRepo := user.NewUserRepository(db)
 	postRepo := post.NewPostRepository(db)
 	commentRepo := comment.NewCommentRepository(db)
 
 	// Services
-	logger.Log.Debug("Инициализация сервисов")
 	userService := user.NewUserService(userRepo)
 	authService := auth.NewAuthService(cfg, userRepo, jwtAuth)
 	postService := post.NewPostService(postRepo)
 	commentService := comment.NewCommentService(commentRepo, postRepo)
 
 	// Handlers
-	logger.Log.Debug("Инициализация хендлеров")
 	authHandler := auth.NewAuthHandler(userService, authService, v)
 	userHandler := user.NewUserHandler(userService, postService, v)
 	postHandler := post.NewPostHandler(postService, v)
 	commentHandler := comment.NewCommentHandler(commentService, v)
 
 	// Init Fiber App
-	logger.Log.Debug("Инициализация fiber")
+	logger.Log.Debug("Init fiber")
 	app := fiber.New(fiber.Config{
 		JSONDecoder: sonic.Unmarshal,
 		JSONEncoder: sonic.Marshal,
@@ -112,7 +108,7 @@ func main() {
 	routes.SetupRoutes(app, routeDeps)
 
 	// Start app
-	logger.Log.Debug("Старт сервера")
+	logger.Log.Debug("Start app...")
 	err = app.Listen(fmt.Sprintf(":%d", cfg.Server.Port))
 	if err != nil {
 		panic("Error: " + err.Error())

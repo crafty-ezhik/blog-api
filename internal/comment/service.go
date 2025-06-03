@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/internal/post"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -20,6 +21,7 @@ type CommentServiceImpl struct {
 }
 
 func NewCommentService(commentRepo CommentRepository, postRepo post.PostRepository) *CommentServiceImpl {
+	logger.Log.Debug("Init comment service")
 	return &CommentServiceImpl{
 		CommentRepo: commentRepo,
 		PostRepo:    postRepo,

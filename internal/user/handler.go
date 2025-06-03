@@ -3,6 +3,7 @@ package user
 import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/internal/post"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/crafty-ezhik/blog-api/pkg/req"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
@@ -29,6 +30,7 @@ type UserHandlerImpl struct {
 }
 
 func NewUserHandler(userService UserService, postService post.PostService, validator *validate.XValidator) *UserHandlerImpl {
+	logger.Log.Debug("Init user handler")
 	return &UserHandlerImpl{
 		UserService: userService,
 		PostService: postService,

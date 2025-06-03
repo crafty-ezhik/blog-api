@@ -1,6 +1,9 @@
 package user
 
-import "github.com/crafty-ezhik/blog-api/internal/models"
+import (
+	"github.com/crafty-ezhik/blog-api/internal/models"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
+)
 
 type UserService interface {
 	GetByID(userID uint) (*models.User, error)
@@ -15,6 +18,7 @@ type UserServiceImpl struct {
 }
 
 func NewUserService(UserRepo UserRepository) *UserServiceImpl {
+	logger.Log.Debug("Init user service")
 	return &UserServiceImpl{UserRepo: UserRepo}
 }
 

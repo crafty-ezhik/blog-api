@@ -2,6 +2,7 @@ package post
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/crafty-ezhik/blog-api/pkg/req"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
@@ -23,6 +24,7 @@ type PostHandlerImpl struct {
 }
 
 func NewPostHandler(postService PostService, validator *validate.XValidator) *PostHandlerImpl {
+	logger.Log.Debug("Init post handler")
 	return &PostHandlerImpl{
 		PostService: postService,
 		v:           validator,

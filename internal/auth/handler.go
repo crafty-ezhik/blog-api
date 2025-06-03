@@ -3,6 +3,7 @@ package auth
 import (
 	"github.com/crafty-ezhik/blog-api/internal/user"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/crafty-ezhik/blog-api/pkg/req"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
 	"github.com/gofiber/fiber/v2"
@@ -22,6 +23,7 @@ type AuthHandlerImpl struct {
 }
 
 func NewAuthHandler(userService user.UserService, authService AuthService, validator *validate.XValidator) *AuthHandlerImpl {
+	logger.Log.Debug("Init auth handler")
 	return &AuthHandlerImpl{
 		UserService: userService,
 		AuthService: authService,

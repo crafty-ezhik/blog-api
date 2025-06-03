@@ -33,6 +33,7 @@ type JWT struct {
 }
 
 func NewJWT(jwtService *JWTService, accessTTL, refreshTTL time.Duration, signingKey string) *JWT {
+	logger.Log.Debug("Init JWT module")
 	return &JWT{
 		jwtService: jwtService,
 		accessTTL:  accessTTL,
@@ -53,7 +54,7 @@ type Tokens struct {
 }
 
 func (j *JWT) GenerateToken(userID uint, tokenType TokenType) (string, error) {
-	logger.Log.Debug("Calling the GenerateToken function")
+	logger.Log.Info("Calling the GenerateToken function")
 	logger.Log.Debug("Generating new token", zap.Uint("user_id", userID))
 	currentVersion, err := j.jwtService.versioner.GetVersion(userID)
 	if err != nil {
@@ -67,6 +68,7 @@ func (j *JWT) GenerateToken(userID uint, tokenType TokenType) (string, error) {
 		"version": currentVersion,
 	}
 
+	logger.Log.Debug("Check token type")
 	switch tokenType {
 	case Access:
 		claims["exp"] = time.Now().Add(j.accessTTL).Unix()
@@ -82,12 +84,12 @@ func (j *JWT) GenerateToken(userID uint, tokenType TokenType) (string, error) {
 		logger.Log.Error("Error when signing the token: ", zap.Error(err))
 		return "", err
 	}
-	logger.Log.Debug("Generated new token successfully")
+	logger.Log.Info("Generated new token successfully")
 	return signedToken, nil
 }
 
 func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
-	logger.Log.Debug("Calling the VerifyToken function")
+	logger.Log.Info("Calling the VerifyToken function")
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New(ErrUnexpectedSigningMethod)
@@ -99,6 +101,7 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 		return nil, err
 	}
 
+	logger.Log.Debug("Conversion to jwt.MapClaims")
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
 		logger.Log.Error("Invalid token")
@@ -106,9 +109,11 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 	}
 
 	// Получение UserID
+	logger.Log.Debug("Get user_id")
 	userID := uint(claims["user_id"].(float64))
 
 	// Получение и проверка версии
+	logger.Log.Debug("Get and check version")
 	version := uint(claims["version"].(float64))
 	currentVersion, err := j.jwtService.versioner.GetVersion(userID)
 	if err != nil {
@@ -121,6 +126,7 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 	}
 
 	// Получение и проверка exp
+	logger.Log.Debug("Get and check exp")
 	exp := int64(claims["exp"].(float64))
 	if time.Now().Unix() > exp {
 		logger.Log.Debug("The token expired")
@@ -135,7 +141,7 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 }
 
 func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
-	logger.Log.Debug("Calling the Refresh function")
+	logger.Log.Info("Calling the Refresh function")
 	// Надо проверить не черном ли списке токен
 	if j.jwtService.blackLister.IsBlackListed(refreshToken) {
 		logger.Log.Debug("Token is blacklisted")
@@ -150,6 +156,7 @@ func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
 	}
 
 	// Увеличение версии токена
+	logger.Log.Debug("Increment token version")
 	err = j.jwtService.versioner.IncrementVersion(tokenData.UserId)
 	if err != nil {
 		logger.Log.Error("Error incrementing version", zap.Error(err))
@@ -169,6 +176,7 @@ func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
 	}
 
 	// Добавление старого refresh токена в BlackList
+	logger.Log.Debug("Add old token into blacklist")
 	err = j.jwtService.blackLister.AddToBlackList(refreshToken, time.Until(time.Unix(tokenData.Exp, 0)))
 	if err != nil {
 		logger.Log.Error("Error adding token to blacklist", zap.Error(err))
@@ -183,7 +191,7 @@ func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
 }
 
 func (j *JWT) Logout(refreshToken string) error {
-	logger.Log.Debug("Calling the Logout function")
+	logger.Log.Info("Calling the Logout function")
 	if j.jwtService.blackLister.IsBlackListed(refreshToken) {
 		logger.Log.Debug("Token is blacklisted")
 		return errors.New(ErrInBlackList)
@@ -196,12 +204,14 @@ func (j *JWT) Logout(refreshToken string) error {
 		return err
 	}
 
+	logger.Log.Debug("Increment token version")
 	err = j.jwtService.versioner.IncrementVersion(tokenData.UserId)
 	if err != nil {
 		logger.Log.Error("Error incrementing version", zap.Error(err))
 		return errors.New(ErrInternalServer)
 	}
 
+	logger.Log.Debug("Add old token into blacklist")
 	err = j.jwtService.blackLister.AddToBlackList(refreshToken, time.Until(time.Unix(tokenData.Exp, 0)))
 	if err != nil {
 		logger.Log.Error("Error adding token to blacklist", zap.Error(err))

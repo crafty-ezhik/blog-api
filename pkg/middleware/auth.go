@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/gofiber/fiber/v2"
 	"strings"
 )
@@ -12,6 +13,8 @@ var UserIDKey KeyType = "user_id"
 
 func AuthMiddleware(jwt *jwt.JWT) fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		logger.Log.Info("Check access token")
+		logger.Log.Debug("Check Authorization header")
 		rawToken := c.Get("Authorization")
 		if rawToken == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
@@ -20,6 +23,7 @@ func AuthMiddleware(jwt *jwt.JWT) fiber.Handler {
 			})
 		}
 
+		logger.Log.Debug("Check Bearer prefix")
 		if !strings.HasPrefix(rawToken, "Bearer ") {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"err":     "Unauthorized",
@@ -35,6 +39,7 @@ func AuthMiddleware(jwt *jwt.JWT) fiber.Handler {
 			})
 		}
 		c.Locals(UserIDKey, tokenData.UserId)
+		logger.Log.Info("Token verification completed successfully")
 		return c.Next()
 	}
 }

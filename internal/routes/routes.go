@@ -44,7 +44,7 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 		router.Post("/", deps.PostHandler.CreatePost)      // Создание статьи
 		router.Get("/", deps.PostHandler.GetAllPosts)      // Получение всех статей
 		router.Get("/:id", deps.PostHandler.GetPostById)   // Получение конкретной статьи
-		router.Put("/:id", deps.PostHandler.UpdatePost)    // Обновление статьи
+		router.Patch("/:id", deps.PostHandler.UpdatePost)  // Обновление статьи
 		router.Delete("/:id", deps.PostHandler.DeletePost) // Удаление статьи
 
 		router.Get("/:id/comments", pass)               // Получение всех комментариев к статье

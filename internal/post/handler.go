@@ -91,9 +91,53 @@ func (h *PostHandlerImpl) CreatePost(c *fiber.Ctx) error {
 }
 
 func (h *PostHandlerImpl) UpdatePost(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
+	postID, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"message": "Post Id is invalid",
+		})
+	}
+
+	body, err := req.HandleBody[UpdateRequest](c, h.v)
+	if err != nil {
+		return nil
+	}
+
+	updatedPost := &models.Post{
+		Title: body.Title,
+		Text:  body.Text,
+	}
+	err = h.PostService.UpdatePost(uint(postID), updatedPost)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"success": true,
+		"data":    "post updated",
+	})
 }
 
 func (h *PostHandlerImpl) DeletePost(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
+	postID, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"message": "Post Id is invalid",
+		})
+	}
+	err = h.PostService.DeletePost(uint(postID))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"message": err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusNoContent).JSON(fiber.Map{
+		"success": true,
+		"data":    "post deleted",
+	})
 }

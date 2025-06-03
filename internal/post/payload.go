@@ -4,3 +4,8 @@ type CreateRequest struct {
 	Title string `json:"title" validate:"required,max=255"`
 	Text  string `json:"text" validate:"required"`
 }
+
+type UpdateRequest struct {
+	Title string `json:"title" validate:"required,max=255"`
+	Text  string `json:"text" validate:"required"`
+}

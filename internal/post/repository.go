@@ -25,7 +25,7 @@ func NewPostRepository(db *gorm.DB) *PostRepositoryImpl {
 
 func (repo *PostRepositoryImpl) FindALL() ([]models.Post, error) {
 	var posts []models.Post
-	result := repo.db.Find(&posts)
+	result := repo.db.Model(&models.Post{}).Find(&posts)
 	return posts, result.Error
 }
 

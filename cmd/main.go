@@ -67,19 +67,21 @@ func main() {
 	logger.Log.Debug("Инициализация репозиториев")
 	userRepo := user.NewUserRepository(db)
 	postRepo := post.NewPostRepository(db)
-	_ = comment.NewCommentRepository(db)
+	commentRepo := comment.NewCommentRepository(db)
 
 	// Services
 	logger.Log.Debug("Инициализация сервисов")
 	userService := user.NewUserService(userRepo)
 	authService := auth.NewAuthService(cfg, userRepo, jwtAuth)
 	postService := post.NewPostService(postRepo)
+	commentService := comment.NewCommentService(commentRepo, postRepo)
 
 	// Handlers
 	logger.Log.Debug("Инициализация хендлеров")
 	authHandler := auth.NewAuthHandler(userService, authService, v)
 	userHandler := user.NewUserHandler(userService, postService, v)
 	postHandler := post.NewPostHandler(postService, v)
+	commentHandler := comment.NewCommentHandler(commentService, v)
 
 	// Init Fiber App
 	logger.Log.Debug("Инициализация fiber")
@@ -100,10 +102,11 @@ func main() {
 	}))
 	//
 	routeDeps := routes.RouteDeps{
-		AuthHandler: authHandler,
-		UserHandler: userHandler,
-		PostHandler: postHandler,
-		JWT:         jwtAuth,
+		AuthHandler:    authHandler,
+		UserHandler:    userHandler,
+		PostHandler:    postHandler,
+		CommentHandler: commentHandler,
+		JWT:            jwtAuth,
 	}
 
 	routes.SetupRoutes(app, routeDeps)

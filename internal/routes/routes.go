@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/auth"
+	"github.com/crafty-ezhik/blog-api/internal/comment"
 	"github.com/crafty-ezhik/blog-api/internal/post"
 	"github.com/crafty-ezhik/blog-api/internal/user"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
@@ -10,10 +11,11 @@ import (
 )
 
 type RouteDeps struct {
-	AuthHandler auth.AuthHandler
-	UserHandler user.UserHandler
-	PostHandler post.PostHandler
-	JWT         *jwt.JWT
+	AuthHandler    auth.AuthHandler
+	UserHandler    user.UserHandler
+	PostHandler    post.PostHandler
+	CommentHandler comment.CommentHandler
+	JWT            *jwt.JWT
 }
 
 func SetupRoutes(app *fiber.App, deps RouteDeps) {
@@ -21,22 +23,22 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 	app.Route("/auth", func(router fiber.Router) {
 		router.Post("/register", deps.AuthHandler.Register)
 		router.Post("/login", deps.AuthHandler.Login)
-		router.Post("/logout", middleware.AuthMiddleware(deps.JWT), deps.AuthHandler.Logout)   // TODO: Нужна проверка access токена
-		router.Post("/refresh", middleware.AuthMiddleware(deps.JWT), deps.AuthHandler.Refresh) // TODO: Нужна проверка refresh токена
+		router.Post("/logout", middleware.AuthMiddleware(deps.JWT), deps.AuthHandler.Logout)
+		router.Post("/refresh", middleware.AuthMiddleware(deps.JWT), deps.AuthHandler.Refresh)
 	})
 
 	api := app.Group("/api", middleware.AuthMiddleware(deps.JWT))
 
 	// Users
 	api.Route("users", func(router fiber.Router) {
-		router.Get("/me", deps.UserHandler.GetMe) // TODO: Нужна проверка access токена
+		router.Get("/me", deps.UserHandler.GetMe)
 		router.Get("/:id", deps.UserHandler.GetByID)
 		router.Patch("/me", deps.UserHandler.Update)
 		router.Delete("/:id", deps.UserHandler.Delete)
-		router.Get("/my/posts", deps.UserHandler.GetMyPosts)                                // Получение постов пользователя
-		router.Get("/my/posts/:postId/comments", deps.UserHandler.GetMyCommentsByPostID)    // Получение всех своих комментариев к статье
-		router.Get("/:id/posts", deps.UserHandler.GetUserPostsByID)                         // Получение постов по id пользователя
-		router.Get("/:id/posts/:postId/comments", deps.UserHandler.GetUserCommentsByPostID) // Получение всех комментариев к статье по id пользователя
+		router.Get("/my/posts", deps.UserHandler.GetMyPosts)                           // Получение постов пользователя
+		router.Get("/my/posts/:postId/comments", deps.CommentHandler.GetMyComment)     // Получение всех своих комментариев к статье
+		router.Get("/:id/posts", deps.UserHandler.GetUserPostsByID)                    // Получение постов по id пользователя
+		router.Get("/:id/posts/:postId/comments", deps.CommentHandler.GetUserComments) // Получение всех комментариев к статье по id пользователя
 	})
 
 	// Posts
@@ -47,15 +49,9 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 		router.Patch("/:id", deps.PostHandler.UpdatePost)  // Обновление статьи
 		router.Delete("/:id", deps.PostHandler.DeletePost) // Удаление статьи
 
-		router.Get("/:id/comments", pass)               // Получение всех комментариев к статье
-		router.Post("/:id/comments", pass)              // Создание комментария к посту
-		router.Put("/:id/comments/:commentId", pass)    // Обновление комментария
-		router.Delete("/:id/comments/:commentId", pass) // Удаление комментария
-	})
-}
-
-func pass(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusTeapot).JSON(fiber.Map{
-		"success": true,
+		router.Get("/:id/comments", deps.CommentHandler.GetAllCommentsPost)          // Получение всех комментариев к статье
+		router.Post("/:id/comments", deps.CommentHandler.CreateComments)             // Создание комментария к посту
+		router.Patch("/:id/comments/:commentId", deps.CommentHandler.UpdateComment)  // Обновление комментария
+		router.Delete("/:id/comments/:commentId", deps.CommentHandler.DeleteComment) // Удаление комментария
 	})
 }

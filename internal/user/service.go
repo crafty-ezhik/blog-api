@@ -5,6 +5,8 @@ import (
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
 )
 
+//go:generate mockgen -source=service.go -destination=mock/mock.go
+
 type UserService interface {
 	GetByID(userID uint) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)

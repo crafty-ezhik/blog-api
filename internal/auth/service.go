@@ -11,6 +11,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+//go:generate mockgen -source=service.go -destination=mock/mock.go
+
 const (
 	ErrUserExisted        = "the user with this email already exists"
 	ErrInvalidCredentials = "invalid credentials"

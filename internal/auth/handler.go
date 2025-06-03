@@ -83,7 +83,7 @@ func (h *AuthHandlerImpl) Register(c *fiber.Ctx) error {
 	if err != nil || !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"success": false,
-			"error":   err,
+			"error":   "User already exists",
 		})
 	}
 

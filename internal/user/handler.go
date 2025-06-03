@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
+	"github.com/crafty-ezhik/blog-api/internal/post"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/crafty-ezhik/blog-api/pkg/req"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
@@ -15,7 +16,7 @@ type UserHandler interface {
 	Update(c *fiber.Ctx) error
 	Delete(c *fiber.Ctx) error
 
-	GetMyPostsByID(c *fiber.Ctx) error
+	GetMyPosts(c *fiber.Ctx) error
 	GetUserPostsByID(c *fiber.Ctx) error
 	GetMyCommentsByPostID(c *fiber.Ctx) error
 	GetUserCommentsByPostID(c *fiber.Ctx) error
@@ -23,12 +24,14 @@ type UserHandler interface {
 
 type UserHandlerImpl struct {
 	UserService UserService
+	PostService post.PostService
 	v           *validate.XValidator
 }
 
-func NewUserHandler(userService UserService, validator *validate.XValidator) *UserHandlerImpl {
+func NewUserHandler(userService UserService, postService post.PostService, validator *validate.XValidator) *UserHandlerImpl {
 	return &UserHandlerImpl{
 		UserService: userService,
+		PostService: postService,
 		v:           validator,
 	}
 }
@@ -145,12 +148,25 @@ func (h *UserHandlerImpl) Delete(c *fiber.Ctx) error {
 // endregion
 
 // region: Операции с пользователем, постами и комментариями
-func (h *UserHandlerImpl) GetMyPostsByID(c *fiber.Ctx) error {
+func (h *UserHandlerImpl) GetMyPosts(c *fiber.Ctx) error {
 	userID := c.Locals(middleware.UserIDKey).(uint)
 
+	data, err := h.PostService.GetPostsByAuthorID(userID)
+	if len(data) < 1 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   "Posts not found",
+		})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"success": true,
-		"data":    userID,
+		"data":    data,
 	})
 }
 
@@ -162,9 +178,24 @@ func (h *UserHandlerImpl) GetUserPostsByID(c *fiber.Ctx) error {
 			"error":   "id must be an integer",
 		})
 	}
+
+	data, err := h.PostService.GetPostsByAuthorID(uint(userId))
+	if len(data) < 1 {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   "Posts not found",
+		})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   err.Error(),
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"success": true,
-		"data":    userId,
+		"data":    data,
 	})
 }
 

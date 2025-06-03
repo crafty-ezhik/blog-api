@@ -5,6 +5,7 @@ import "github.com/crafty-ezhik/blog-api/internal/models"
 type PostService interface {
 	GetAllPosts() ([]models.Post, error)
 	GetPostById(postID uint) (*models.Post, error)
+	GetPostsByAuthorID(authorID uint) ([]models.Post, error)
 	CreatePost(post *models.Post) error
 	UpdatePost(postID uint, updatedFields *models.Post) error
 	DeletePost(postID uint) error
@@ -26,6 +27,10 @@ func (s *PostServiceImpl) GetAllPosts() ([]models.Post, error) {
 
 func (s *PostServiceImpl) GetPostById(postID uint) (*models.Post, error) {
 	return s.PostRepo.FindByID(postID)
+}
+
+func (s *PostServiceImpl) GetPostsByAuthorID(authorID uint) ([]models.Post, error) {
+	return s.PostRepo.FindByUserID(authorID)
 }
 
 func (s *PostServiceImpl) CreatePost(post *models.Post) error {

@@ -78,7 +78,7 @@ func main() {
 	// Handlers
 	logger.Log.Debug("Инициализация хендлеров")
 	authHandler := auth.NewAuthHandler(userService, authService, v)
-	userHandler := user.NewUserHandler(userService, v)
+	userHandler := user.NewUserHandler(userService, postService, v)
 	postHandler := post.NewPostHandler(postService, v)
 
 	// Init Fiber App

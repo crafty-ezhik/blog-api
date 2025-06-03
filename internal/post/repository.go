@@ -8,6 +8,7 @@ import (
 type PostRepository interface {
 	FindALL() ([]models.Post, error)
 	FindByID(postID uint) (*models.Post, error)
+	FindByUserID(authorID uint) ([]models.Post, error)
 	Create(post *models.Post) error
 	Update(postID uint, updatedFields *models.Post) error
 	Delete(postID uint) error
@@ -33,6 +34,12 @@ func (repo *PostRepositoryImpl) FindByID(postID uint) (*models.Post, error) {
 	var post models.Post
 	result := repo.db.First(&post, postID)
 	return &post, result.Error
+}
+
+func (repo *PostRepositoryImpl) FindByUserID(authorID uint) ([]models.Post, error) {
+	var posts []models.Post
+	result := repo.db.Where("author_id = ?", authorID).Find(&posts)
+	return posts, result.Error
 }
 
 func (repo *PostRepositoryImpl) Create(post *models.Post) error {

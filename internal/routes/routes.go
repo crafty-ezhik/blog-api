@@ -33,7 +33,7 @@ func SetupRoutes(app *fiber.App, deps RouteDeps) {
 		router.Get("/:id", deps.UserHandler.GetByID)
 		router.Patch("/me", deps.UserHandler.Update)
 		router.Delete("/:id", deps.UserHandler.Delete)
-		router.Get("/my/posts", deps.UserHandler.GetMyPostsByID)                            // Получение постов пользователя
+		router.Get("/my/posts", deps.UserHandler.GetMyPosts)                                // Получение постов пользователя
 		router.Get("/my/posts/:postId/comments", deps.UserHandler.GetMyCommentsByPostID)    // Получение всех своих комментариев к статье
 		router.Get("/:id/posts", deps.UserHandler.GetUserPostsByID)                         // Получение постов по id пользователя
 		router.Get("/:id/posts/:postId/comments", deps.UserHandler.GetUserCommentsByPostID) // Получение всех комментариев к статье по id пользователя

@@ -175,7 +175,7 @@ func TestAuthServiceImpl_Register(t *testing.T) {
 		mockUserRepo.EXPECT().FindByEmail(email).Return(nil, nil)
 
 		// Ожидаем вызов Create
-		mockUserRepo.EXPECT().Create(gomock.All()).DoAndReturn(func(user *models.User) error {
+		mockUserRepo.EXPECT().Create(gomock.Any()).DoAndReturn(func(user *models.User) error {
 			assert.Equal(t, request.Name, user.Name)
 			assert.Equal(t, request.Age, user.Age)
 			assert.Equal(t, request.Email, user.Email)

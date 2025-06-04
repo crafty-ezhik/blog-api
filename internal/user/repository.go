@@ -6,6 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
+//go:generate mockgen -source=repository.go -destination=mock/user_repo_mock.go
+
 type UserRepository interface {
 	FindByID(userId uint) (*models.User, error)
 	FindByEmail(email string) (*models.User, error)

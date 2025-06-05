@@ -2,7 +2,6 @@ package comment
 
 import (
 	"errors"
-	"fmt"
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/crafty-ezhik/blog-api/pkg/req"
@@ -73,7 +72,6 @@ func (h *CommentHandlerImpl) GetUserComments(c *fiber.Ctx) error {
 			"error":   "Post ID must be an integer",
 		})
 	}
-	fmt.Println(userID, postID)
 	return h.getComments(c, uint(postID), uint(userID))
 }
 

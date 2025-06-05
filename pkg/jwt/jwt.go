@@ -24,14 +24,14 @@ const (
 	Refresh
 )
 
-const (
-	ErrUnexpectedSigningMethod = "unexpected signing method"
-	ErrInvalidToken            = "invalid token"
-	ErrSessionExpired          = "session expired"
-	ErrInternalServer          = "internal server error"
-	ErrRefreshExpired          = "refresh token expired due to logout / password change"
-	ErrUnknownTokenType        = "unknown token type"
-	ErrInBlackList             = "refresh token revoked or not found"
+var (
+	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
+	ErrInvalidToken            = errors.New("invalid token")
+	ErrSessionExpired          = errors.New("session expired")
+	ErrInternalServer          = errors.New("internal server error")
+	ErrRefreshExpired          = errors.New("refresh token expired due to logout / password change")
+	ErrUnknownTokenType        = errors.New("unknown token type")
+	ErrInBlackList             = errors.New("refresh token revoked or not found")
 )
 
 type JWT struct {
@@ -84,7 +84,7 @@ func (j *JWT) GenerateToken(userID uint, tokenType TokenType) (string, error) {
 	case Refresh:
 		claims["exp"] = time.Now().Add(j.refreshTTL).Unix()
 	default:
-		return "", errors.New(ErrUnknownTokenType)
+		return "", ErrUnknownTokenType
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -101,20 +101,20 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 	logger.Log.Info("Calling the VerifyToken function")
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New(ErrUnexpectedSigningMethod)
+			return nil, ErrUnexpectedSigningMethod
 		}
 		return []byte(j.signingKey), nil
 	})
 	if err != nil {
 		logger.Log.Error("Error parsing token", zap.Error(err))
-		return nil, errors.New(ErrInvalidToken)
+		return nil, ErrInvalidToken
 	}
 
 	logger.Log.Debug("Conversion to jwt.MapClaims")
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
 		logger.Log.Error("Invalid token")
-		return nil, errors.New(ErrInvalidToken)
+		return nil, ErrInvalidToken
 	}
 
 	// Получение UserID
@@ -127,11 +127,11 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 	currentVersion, err := j.jwtService.versioner.GetVersion(userID)
 	if err != nil {
 		logger.Log.Error("Error generating token", zap.Error(err))
-		return nil, errors.New(ErrInternalServer)
+		return nil, ErrInternalServer
 	}
 	if version < currentVersion {
 		logger.Log.Debug("The token version does not match:", zap.Error(err))
-		return nil, errors.New(ErrRefreshExpired)
+		return nil, ErrRefreshExpired
 	}
 
 	// Получение и проверка exp
@@ -139,7 +139,7 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 	exp := int64(claims["exp"].(float64))
 	if time.Now().Unix() > exp {
 		logger.Log.Debug("The token expired")
-		return nil, errors.New(ErrSessionExpired)
+		return nil, ErrSessionExpired
 	}
 
 	return &JWTData{
@@ -154,7 +154,7 @@ func (j *JWT) Refresh(refreshToken string) (*Tokens, error) {
 	// Надо проверить не черном ли списке токен
 	if j.jwtService.blackLister.IsBlackListed(refreshToken) {
 		logger.Log.Debug("Token is blacklisted")
-		return nil, errors.New(ErrInBlackList)
+		return nil, ErrInBlackList
 	}
 
 	// Парсинг токена
@@ -203,7 +203,7 @@ func (j *JWT) Logout(refreshToken string) error {
 	logger.Log.Info("Calling the Logout function")
 	if j.jwtService.blackLister.IsBlackListed(refreshToken) {
 		logger.Log.Debug("Token is blacklisted")
-		return errors.New(ErrInBlackList)
+		return ErrInBlackList
 	}
 
 	// Парсинг токена
@@ -217,14 +217,14 @@ func (j *JWT) Logout(refreshToken string) error {
 	err = j.jwtService.versioner.IncrementVersion(tokenData.UserId)
 	if err != nil {
 		logger.Log.Error("Error incrementing version", zap.Error(err))
-		return errors.New(ErrInternalServer)
+		return ErrInternalServer
 	}
 
 	logger.Log.Debug("Add old token into blacklist")
 	err = j.jwtService.blackLister.AddToBlackList(refreshToken, time.Until(time.Unix(tokenData.Exp, 0)))
 	if err != nil {
 		logger.Log.Error("Error adding token to blacklist", zap.Error(err))
-		return errors.New(ErrInternalServer)
+		return ErrInternalServer
 	}
 	return nil
 }

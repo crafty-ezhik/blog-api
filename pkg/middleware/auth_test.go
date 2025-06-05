@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"errors"
 	"fmt"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
 	mock_jwt "github.com/crafty-ezhik/blog-api/pkg/jwt/mock"
@@ -85,7 +84,7 @@ func TestAuthMiddleware(t *testing.T) {
 			headerName:  "Authorization",
 			headerValue: "Bearer token",
 			mockSetup: func(mocks *Mocks) {
-				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, errors.New(jwt.ErrInvalidToken))
+				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, jwt.ErrInvalidToken)
 			},
 			expectedCode: 401,
 			expectedBody: `{"details":"invalid token","err":"Unauthorized"}`,
@@ -93,9 +92,9 @@ func TestAuthMiddleware(t *testing.T) {
 		{
 			Name:        "Token is invalid",
 			headerName:  "Authorization",
-			headerValue: "Bearer ",
+			headerValue: "Bearer token",
 			mockSetup: func(mocks *Mocks) {
-				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, errors.New(jwt.ErrInvalidToken))
+				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, jwt.ErrInvalidToken)
 			},
 			expectedCode: 401,
 			expectedBody: `{"details":"invalid token","err":"Unauthorized"}`,
@@ -105,9 +104,9 @@ func TestAuthMiddleware(t *testing.T) {
 			headerName:  "Authorization",
 			headerValue: "Bearer token",
 			mockSetup: func(mocks *Mocks) {
-				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, errors.New(jwt.ErrInternalServer))
+				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, jwt.ErrInternalServer)
 			},
-			expectedCode: 401,
+			expectedCode: 500,
 			expectedBody: `{"details":"internal server error","err":"Unauthorized"}`,
 		},
 		{
@@ -115,7 +114,7 @@ func TestAuthMiddleware(t *testing.T) {
 			headerName:  "Authorization",
 			headerValue: "Bearer token",
 			mockSetup: func(mocks *Mocks) {
-				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, errors.New(jwt.ErrRefreshExpired))
+				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, jwt.ErrRefreshExpired)
 			},
 			expectedCode: 401,
 			expectedBody: `{"details":"refresh token expired due to logout / password change","err":"Unauthorized"}`,
@@ -125,7 +124,7 @@ func TestAuthMiddleware(t *testing.T) {
 			headerName:  "Authorization",
 			headerValue: "Bearer token",
 			mockSetup: func(mocks *Mocks) {
-				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, errors.New(jwt.ErrSessionExpired))
+				mocks.JWT.EXPECT().VerifyToken(token).Return(nil, jwt.ErrSessionExpired)
 			},
 			expectedCode: 401,
 			expectedBody: `{"details":"session expired","err":"Unauthorized"}`,

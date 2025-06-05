@@ -43,7 +43,7 @@ func setup(t *testing.T) (*AuthHandlerImpl, *Mocks) {
 	// 2. Создаем экземпляр конфига
 	cfg := &config.Config{
 		Auth: config.AuthConfig{
-			SigningKey: "FKI/0XYt3YksmneW8QxCRWdlYbINIzPdp4fpiTqXXqs=",
+			SigningKey: "my_signing_key", //"FKI/0XYt3YksmneW8QxCRWdlYbINIzPdp4fpiTqXXqs=",
 			SecretKey:  "",
 			AccessTTL:  time.Duration(30) * time.Minute,
 			RefreshTTL: time.Duration(30) * time.Hour,
@@ -100,6 +100,7 @@ func TestAuthHandlerImpl_Login(t *testing.T) {
 		mockSetup          func(mocks *Mocks)
 		expectedStatusCode int
 		expectedBody       string
+		cookieLen          int
 	}{
 		{
 			name: "Login success",
@@ -119,6 +120,7 @@ func TestAuthHandlerImpl_Login(t *testing.T) {
 			},
 			expectedStatusCode: 200,
 			expectedBody:       `access_token`,
+			cookieLen:          1,
 		},
 		{
 			name: "Invalid email format",
@@ -180,6 +182,9 @@ func TestAuthHandlerImpl_Login(t *testing.T) {
 			respBody, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 			assert.Contains(t, string(respBody), tt.expectedBody)
+
+			cookie := resp.Cookies()
+			assert.Len(t, cookie, tt.cookieLen)
 		})
 	}
 }
@@ -306,8 +311,173 @@ func TestAuthHandlerImpl_Register(t *testing.T) {
 		})
 	}
 }
-func TestAuthHandlerImpl_Logout(t *testing.T) {}
+func TestAuthHandlerImpl_Logout(t *testing.T) {
+	logger.Log, _ = zap.NewDevelopment()
+	defer logger.Log.Sync()
+
+	authHandler, mocks := setup(t)
+
+	// 1. Создаем fiber app
+	app := fiber.New()
+	path := "/auth/logout"
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDkxMzM1MDIsImlhdCI6MTc0ODk2MDcwMiwidXNlcl9pZCI6MiwidmVyc2lvbiI6MX0.Nw6j38veHEhmxZoY4Ne6GCbt2lEZP8-09TxL6GkZuik"
+
+	// 2. Регистрируем проверяемый маршрут
+	app.Post(path, authHandler.Logout)
+
+	tests := []struct {
+		name                 string
+		mockSetup            func(mocks *Mocks)
+		expectedStatusCode   int
+		expectedBody         string
+		requestCookie        *http.Cookie
+		cookieLen            int
+		cookieName           string
+		responseCookieMaxAge int
+	}{
+		{
+			name: "Successful logout",
+			mockSetup: func(mocks *Mocks) {
+				mocks.BlackList.EXPECT().IsBlackListed(token).Return(false)
+				mocks.BlackList.EXPECT().AddToBlackList(token, gomock.Any()).Return(nil)
+				mocks.TokenVersion.EXPECT().IncrementVersion(uint(2)).Return(nil)
+				mocks.TokenVersion.EXPECT().GetVersion(uint(2)).Return(uint(1), nil).Times(3)
+			},
+			requestCookie: &http.Cookie{
+				Name:     "refresh_token",
+				Value:    token,
+				Path:     "/",
+				MaxAge:   0,
+				Secure:   true,
+				HttpOnly: true,
+				SameSite: http.SameSiteLaxMode,
+			},
+			cookieLen:            1,
+			cookieName:           "refresh_token",
+			responseCookieMaxAge: -1,
+			expectedStatusCode:   http.StatusOK,
+			expectedBody:         `logged out`,
+		},
+		{
+			name:      "Missing token",
+			mockSetup: func(mocks *Mocks) {},
+			requestCookie: &http.Cookie{
+				Name:  "refresh_token",
+				Value: "",
+			},
+			cookieLen:          0,
+			cookieName:         "",
+			expectedStatusCode: http.StatusUnauthorized,
+			expectedBody:       `refresh token revoked or not found`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, path, nil)
+			req.Header.Set("Content-Type", "application/json")
+			req.AddCookie(tt.requestCookie)
+
+			if tt.mockSetup != nil {
+				tt.mockSetup(mocks)
+			}
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(respBody), tt.expectedBody)
+
+			cookie := resp.Cookies()
+			if len(cookie) != 0 {
+				assert.Equal(t, tt.cookieName, cookie[0].Name)
+				assert.LessOrEqual(t, tt.responseCookieMaxAge, cookie[0].MaxAge)
+			}
+			assert.Len(t, cookie, tt.cookieLen)
+		})
+	}
+}
 
 func TestAuthHandlerImpl_Refresh(t *testing.T) {
+	logger.Log, _ = zap.NewDevelopment()
+	defer logger.Log.Sync()
 
+	authHandler, mocks := setup(t)
+
+	// 1. Создаем fiber app
+	app := fiber.New()
+	path := "/auth/refresh"
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDkxMzM1MDIsImlhdCI6MTc0ODk2MDcwMiwidXNlcl9pZCI6MiwidmVyc2lvbiI6MX0.Nw6j38veHEhmxZoY4Ne6GCbt2lEZP8-09TxL6GkZuik"
+
+	// 2. Регистрируем проверяемый маршрут
+	app.Post(path, authHandler.Refresh)
+
+	tests := []struct {
+		name               string
+		mockSetup          func(mocks *Mocks)
+		expectedStatusCode int
+		expectedBody       string
+		requestCookie      *http.Cookie
+		cookieLen          int
+		cookieName         string
+	}{
+		{
+			name: "Successful refresh",
+			mockSetup: func(mocks *Mocks) {
+				mocks.BlackList.EXPECT().IsBlackListed(token).Return(false)
+				mocks.BlackList.EXPECT().AddToBlackList(token, gomock.Any()).Return(nil)
+				mocks.TokenVersion.EXPECT().IncrementVersion(uint(2)).Return(nil)
+				mocks.TokenVersion.EXPECT().GetVersion(uint(2)).Return(uint(1), nil).Times(3)
+			},
+			requestCookie: &http.Cookie{
+				Name:     "refresh_token",
+				Value:    token,
+				Path:     "/",
+				MaxAge:   0,
+				Secure:   true,
+				HttpOnly: true,
+				SameSite: http.SameSiteLaxMode,
+			},
+			cookieLen:          1,
+			cookieName:         "refresh_token",
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       `access_token`,
+		},
+		{
+			name:      "Missing token",
+			mockSetup: func(mocks *Mocks) {},
+			requestCookie: &http.Cookie{
+				Name:  "refresh_token",
+				Value: "",
+			},
+			cookieLen:          0,
+			cookieName:         "",
+			expectedStatusCode: http.StatusUnauthorized,
+			expectedBody:       `refresh token revoked or not found`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, path, nil)
+			req.Header.Set("Content-Type", "application/json")
+			req.AddCookie(tt.requestCookie)
+
+			if tt.mockSetup != nil {
+				tt.mockSetup(mocks)
+			}
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(respBody), tt.expectedBody)
+
+			cookie := resp.Cookies()
+			if len(cookie) != 0 {
+				assert.Equal(t, tt.cookieName, cookie[0].Name)
+			}
+			assert.Len(t, cookie, tt.cookieLen)
+		})
+	}
 }

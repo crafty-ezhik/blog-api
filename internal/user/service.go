@@ -4,6 +4,8 @@ import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
 )
+//go:generate mockgen -source=service.go -destination=mock/user_service_mock.go
+
 
 type UserService interface {
 	GetByID(userID uint) (*models.User, error)

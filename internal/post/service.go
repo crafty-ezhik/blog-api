@@ -4,6 +4,8 @@ import (
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
 )
+//go:generate mockgen -source=service.go -destination=mock/post_service_mock.go
+
 
 type PostService interface {
 	GetAllPosts() ([]models.Post, error)

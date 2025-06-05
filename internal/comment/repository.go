@@ -5,6 +5,8 @@ import (
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"gorm.io/gorm"
 )
+//go:generate mockgen -source=repository.go -destination=mock/comment_repo_mock.go
+
 
 type CommentRepository interface {
 	FindCommentsByPostID(comment *models.Comment) ([]models.Comment, error)

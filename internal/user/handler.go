@@ -19,8 +19,6 @@ type UserHandler interface {
 
 	GetMyPosts(c *fiber.Ctx) error
 	GetUserPostsByID(c *fiber.Ctx) error
-	GetMyCommentsByPostID(c *fiber.Ctx) error
-	GetUserCommentsByPostID(c *fiber.Ctx) error
 }
 
 type UserHandlerImpl struct {
@@ -199,14 +197,6 @@ func (h *UserHandlerImpl) GetUserPostsByID(c *fiber.Ctx) error {
 		"success": true,
 		"data":    data,
 	})
-}
-
-func (h *UserHandlerImpl) GetMyCommentsByPostID(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
-}
-
-func (h *UserHandlerImpl) GetUserCommentsByPostID(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{})
 }
 
 // endregion

@@ -7,6 +7,14 @@ import (
 	"go.uber.org/zap"
 	"time"
 )
+//go:generate mockgen -source=jwt.go -destination=mock/jwt_mock.go
+
+type JWTInterface interface {
+	GenerateToken(userID uint, tokenType TokenType) (string, error)
+	VerifyToken(tokenString string) (*JWTData, error)
+	Refresh(refreshToken string) (*Tokens, error)
+	Logout(refreshToken string) error
+}
 
 type TokenType int
 

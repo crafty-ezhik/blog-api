@@ -94,43 +94,94 @@ func TestAuthHandlerImpl_Login(t *testing.T) {
 
 	app.Post("/auth/login", authHandler.Login)
 
-	t.Run("login success", func(t *testing.T) {
-		payload := LoginRequest{
-			Email:    "test@test.com",
-			Password: "123456",
-		}
+	tests := []struct {
+		name               string
+		payload            LoginRequest
+		mockSetup          func(mocks *Mocks)
+		expectedStatusCode int
+		expectedBody       string
+	}{
+		{
+			name: "Login success",
+			payload: LoginRequest{
+				Email:    "test@test.com",
+				Password: "123456",
+			},
+			mockSetup: func(mocks *Mocks) {
+				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+				mocks.UserRepo.EXPECT().FindByEmail("test@test.com").Return(
+					&models.User{
+						ID:       1,
+						Email:    "test@test.com",
+						Password: string(hashedPassword)}, nil)
 
-		body, err := json.Marshal(payload)
-		require.NoError(t, err)
+				mocks.TokenVersion.EXPECT().GetVersion(uint(1)).Return(uint(1), nil).Times(2)
+			},
+			expectedStatusCode: 200,
+			expectedBody:       `access_token`,
+		},
+		{
+			name: "Invalid email format",
+			payload: LoginRequest{
+				Email:    "test@test....com",
+				Password: "123456",
+			},
+			mockSetup:          nil,
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBody:       `Invalid field or its absence: [Email]`,
+		},
+		{
+			name: "Invalid password",
+			payload: LoginRequest{
+				Email:    "test@test.com",
+				Password: "1234567",
+			},
+			mockSetup: func(mocks *Mocks) {
+				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+				mocks.UserRepo.EXPECT().FindByEmail("test@test.com").Return(
+					&models.User{
+						ID:       1,
+						Email:    "test@test.com",
+						Password: string(hashedPassword)}, nil)
+				mocks.TokenVersion.EXPECT().GetVersion(uint(1)).Return(uint(1), nil).Times(2)
+			},
+			expectedStatusCode: http.StatusNotFound,
+			expectedBody:       `invalid credentials`,
+		},
+		{
+			name: "Empty request body",
+			payload: LoginRequest{
+				Email:    "",
+				Password: "",
+			},
+			mockSetup:          func(mocks *Mocks) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBody:       `Invalid field or its absence: [Email] and [Password]`,
+		},
+	}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
-		require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(tt.payload)
+			require.NoError(t, err)
 
-		mocks.UserRepo.EXPECT().FindByEmail(payload.Email).Return(
-			&models.User{
-				ID:       1,
-				Email:    payload.Email,
-				Password: string(hashedPassword)}, nil)
+			req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
 
-		mocks.TokenVersion.EXPECT().GetVersion(uint(1)).Return(uint(1), nil).Times(2)
+			if tt.mockSetup != nil {
+				tt.mockSetup(mocks)
+			}
 
-		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
+			resp, err := app.Test(req)
+			require.NoError(t, err)
 
-		resp, err := app.Test(req)
-		require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
 
-		respBody, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-
-		var loginResponse LoginResponse
-		err = json.Unmarshal(respBody, &loginResponse)
-		require.NoError(t, err)
-
-		require.Equal(t, fiber.StatusOK, resp.StatusCode)
-		assert.NotEmpty(t, loginResponse.AccessToken)
-		assert.NotEmpty(t, loginResponse.RefreshToken)
-	})
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(respBody), tt.expectedBody)
+		})
+	}
 }
 
 func TestAuthHandlerImpl_Register(t *testing.T) {
@@ -145,54 +196,115 @@ func TestAuthHandlerImpl_Register(t *testing.T) {
 	// 2. Регистрируем проверяемый маршрут
 	app.Post("/auth/register", authHandler.Register)
 
-	t.Run("Successful registration", func(t *testing.T) {
-		payload := RegisterRequest{
-			Email:    "test@test.com",
-			Password: "123456",
-			Name:     "Test User",
-			Age:      20,
-		}
-		body, err := json.Marshal(payload)
-		require.NoError(t, err)
+	tests := []struct {
+		name               string
+		payload            RegisterRequest
+		mockSetup          func(mocks *Mocks)
+		expectedStatusCode int
+		expectedBody       string
+	}{
+		{
+			name: "Successful registration",
+			payload: RegisterRequest{
+				Email:    "test@test.com",
+				Password: "123456",
+				Name:     "Test User",
+				Age:      20,
+			},
+			mockSetup: func(mocks *Mocks) {
+				// Ожидаем, что пользователя нет в базе
+				mocks.UserRepo.EXPECT().FindByEmail("test@test.com").Return(nil, nil)
 
-		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
+				// Ожидаем вызов Create
+				mocks.UserRepo.EXPECT().Create(gomock.Any()).DoAndReturn(func(user *models.User) error {
+					assert.Equal(t, "Test User", user.Name)
+					assert.Equal(t, 20, user.Age)
+					assert.Equal(t, "test@test.com", user.Email)
+					assert.NotEmpty(t, user.Password)
+					return nil
+				})
+			},
+			expectedStatusCode: http.StatusCreated,
+			expectedBody:       `You have successfully registered`,
+		},
+		{
+			name: "User exists",
+			payload: RegisterRequest{
+				Email:    "test@test.com",
+				Password: "123456",
+				Name:     "Test User",
+				Age:      20,
+			},
+			mockSetup: func(mocks *Mocks) {
+				mocks.UserRepo.EXPECT().FindByEmail("test@test.com").Return(&models.User{}, nil)
+			},
+			expectedStatusCode: http.StatusUnauthorized,
+			expectedBody:       `User already exists`,
+		},
+		{
+			name: "Missing email",
+			payload: RegisterRequest{
+				Password: "123456",
+				Name:     "Test User",
+				Age:      20,
+			},
+			mockSetup:          func(mocks *Mocks) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBody:       `false`,
+		},
+		{
+			name: "Missing password",
+			payload: RegisterRequest{
+				Email: "test@test.com",
+				Name:  "Test User",
+				Age:   20,
+			},
+			mockSetup:          func(mocks *Mocks) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBody:       `false`,
+		},
+		{
+			name: "Missing name",
+			payload: RegisterRequest{
+				Email:    "test@test.com",
+				Password: "123456",
+				Age:      20,
+			},
+			mockSetup:          func(mocks *Mocks) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBody:       `false`,
+		},
+		{
+			name: "Missing age",
+			payload: RegisterRequest{
+				Email:    "test@test.com",
+				Password: "123456",
+				Name:     "Test User",
+			},
+			mockSetup:          func(mocks *Mocks) {},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBody:       `false`,
+		},
+	}
 
-		// Ожидаем, что пользователя нет в базе
-		mocks.UserRepo.EXPECT().FindByEmail(payload.Email).Return(nil, nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(tt.payload)
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
 
-		// Ожидаем вызов Create
-		mocks.UserRepo.EXPECT().Create(gomock.Any()).DoAndReturn(func(user *models.User) error {
-			assert.Equal(t, payload.Name, user.Name)
-			assert.Equal(t, payload.Age, user.Age)
-			assert.Equal(t, payload.Email, user.Email)
-			assert.NotEmpty(t, user.Password)
-			return nil
+			if tt.mockSetup != nil {
+				tt.mockSetup(mocks)
+			}
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(respBody), tt.expectedBody)
 		})
-
-		resp, err := app.Test(req)
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusCreated, resp.StatusCode)
-		assert.Contains(t, string(bodyBytes), "successfully")
-	})
-
-	t.Run("Missing email", func(t *testing.T) {
-		payload := RegisterRequest{
-			Password: "123456",
-			Name:     "Test User",
-		}
-		body, _ := json.Marshal(payload)
-		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := app.Test(req)
-		bodyBytes, _ := io.ReadAll(resp.Body)
-
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-		assert.Contains(t, string(bodyBytes), "false")
-	})
+	}
 }
 func TestAuthHandlerImpl_Logout(t *testing.T) {}
 

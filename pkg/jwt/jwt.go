@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 	"time"
 )
+
 //go:generate mockgen -source=jwt.go -destination=mock/jwt_mock.go
 
 type JWTInterface interface {
@@ -106,7 +107,7 @@ func (j *JWT) VerifyToken(tokenString string) (*JWTData, error) {
 	})
 	if err != nil {
 		logger.Log.Error("Error parsing token", zap.Error(err))
-		return nil, err
+		return nil, errors.New(ErrInvalidToken)
 	}
 
 	logger.Log.Debug("Conversion to jwt.MapClaims")

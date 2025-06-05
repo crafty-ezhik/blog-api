@@ -11,7 +11,7 @@ type KeyType string
 
 var UserIDKey KeyType = "user_id"
 
-func AuthMiddleware(jwt *jwt.JWT) fiber.Handler {
+func AuthMiddleware(jwt jwt.JWTInterface) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		logger.Log.Info("Check access token")
 		logger.Log.Debug("Check Authorization header")

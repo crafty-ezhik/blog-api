@@ -7,8 +7,8 @@ import (
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"gorm.io/gorm"
 )
-//go:generate mockgen -source=service.go -destination=mock/comment_service_mock.go
 
+//go:generate mockgen -source=service.go -destination=mocks/comment_service_mock.go
 
 type CommentService interface {
 	GetCommentsByPostID(postID, userID uint) (*GetCommentsResponse, error)

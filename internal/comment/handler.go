@@ -181,7 +181,7 @@ func (h *CommentHandlerImpl) getComments(c *fiber.Ctx, postID, userID uint) erro
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error":   err,
+			"error":   "Internal server error",
 		})
 	}
 

@@ -163,6 +163,12 @@ func (h *CommentHandlerImpl) DeleteComment(c *fiber.Ctx) error {
 	}
 
 	err = h.CommentService.DeleteComment(uint(commentID), uint(postID), userID)
+	if errors.Is(err, ErrPermissionDenied) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"success": false,
+			"error":   "Permission denied",
+		})
+	}
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,

@@ -251,7 +251,88 @@ func TestCommentHandlerImpl_GetUserComments(t *testing.T) {
 	}
 
 }
-func TestCommentHandlerImpl_GetAllCommentsPost(t *testing.T) {}
+func TestCommentHandlerImpl_GetAllCommentsPost(t *testing.T) {
+	logger.Log, _ = zap.NewDevelopment()
+	defer logger.Log.Sync()
+
+	commentHandlerImpl, mocks := setup(t)
+
+	path := "/:id/comments"
+
+	tests := []struct {
+		name               string
+		postId             any
+		mockSetup          func(mock *Mocks)
+		expectedStatusCode int
+		expectedBody       string
+	}{
+		{
+			name:   "Success",
+			postId: 1,
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().GetCommentsByPostID(uint(1), uint(0)).Return(
+					&comment.GetCommentsResponse{
+						Comments: []comment.GetCommentResponseBody{
+							{
+								ID:         0,
+								Title:      "TestTitle",
+								Content:    "TestContent",
+								AuthorName: "TestAuthorName",
+								PostTitle:  "TestPostTitle",
+							},
+						},
+					}, nil)
+			},
+			expectedStatusCode: 200,
+			expectedBody:       "\"success\":true",
+		},
+		{
+			name:               "Invalid PostId",
+			postId:             "one",
+			mockSetup:          nil,
+			expectedStatusCode: 400,
+			expectedBody:       "\"error\":\"Post ID must be an integer",
+		},
+		{
+			name:   "Comments Not Found",
+			postId: 1,
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().GetCommentsByPostID(uint(1), uint(0)).Return(
+					nil, gorm.ErrRecordNotFound)
+			},
+			expectedStatusCode: 404,
+			expectedBody:       "\"error\":\"Comment not found\"",
+		},
+		{
+			name:   "Server internal error",
+			postId: 1,
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().GetCommentsByPostID(uint(1), uint(0)).Return(
+					nil, gorm.ErrInvalidDB)
+			},
+			expectedStatusCode: 500,
+			expectedBody:       "\"error\":\"Internal server error\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/%v/comments", tt.postId), nil)
+
+			app := fiber.New()
+			app.Get(path, commentHandlerImpl.GetAllCommentsPost)
+			if tt.mockSetup != nil {
+				tt.mockSetup(mocks)
+			}
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(respBody), tt.expectedBody)
+		})
+	}
+}
 func TestCommentHandlerImpl_CreateComments(t *testing.T) {
 	logger.Log, _ = zap.NewDevelopment()
 	defer logger.Log.Sync()
@@ -361,7 +442,120 @@ func TestCommentHandlerImpl_CreateComments(t *testing.T) {
 		})
 	}
 }
-func TestCommentHandlerImpl_UpdateComment(t *testing.T) {}
+func TestCommentHandlerImpl_UpdateComment(t *testing.T) {
+	logger.Log, _ = zap.NewDevelopment()
+	defer logger.Log.Sync()
+
+	commentHandlerImpl, mocks := setup(t)
+	path := "/posts/:id/comments/:commentId"
+
+	tests := []struct {
+		name               string
+		commentId          any
+		postId             any
+		payload            comment.UpdateCommentRequest
+		mockSetup          func(mock *Mocks)
+		expectedStatusCode int
+		expectedBody       string
+	}{
+		{
+			name:      "Success",
+			postId:    1,
+			commentId: 1,
+			payload: comment.UpdateCommentRequest{
+				Content: "NewContent",
+			},
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().UpdateComment(uint(1), uint(1), uint(1),
+					&comment.UpdateCommentRequest{Content: "NewContent"}).Return(nil)
+			},
+			expectedStatusCode: 200,
+			expectedBody:       "Comment updated successfully",
+		},
+		{
+			name:               "Invalid CommentId",
+			postId:             1,
+			commentId:          "one",
+			expectedStatusCode: 400,
+			expectedBody:       "Comment ID must be an integer",
+		},
+		{
+			name:               "Invalid PostId",
+			postId:             "one",
+			commentId:          1,
+			expectedStatusCode: 400,
+			expectedBody:       "Post ID must be an integer",
+		},
+		{
+			name:      "Server internal error",
+			commentId: 1,
+			postId:    1,
+			payload: comment.UpdateCommentRequest{
+				Content: "NewContent",
+			},
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().UpdateComment(uint(1), uint(1), uint(1),
+					&comment.UpdateCommentRequest{Content: "NewContent"}).Return(errors.New("error"))
+			},
+			expectedStatusCode: 500,
+			expectedBody:       "Something went wrong",
+		},
+		{
+			name:      "Permission denied",
+			commentId: 1,
+			postId:    2,
+			payload: comment.UpdateCommentRequest{
+				Content: "NewContent",
+			},
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().UpdateComment(uint(1), uint(2), uint(1),
+					&comment.UpdateCommentRequest{Content: "NewContent"}).Return(comment.ErrPermissionDenied)
+			},
+			expectedStatusCode: 403,
+			expectedBody:       "Permission denied",
+		},
+		{
+			name:               "Invalid Body",
+			commentId:          1,
+			postId:             2,
+			payload:            comment.UpdateCommentRequest{},
+			expectedStatusCode: 400,
+			expectedBody:       "Invalid field or its absence: [Content]",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(tt.payload)
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPatch,
+				fmt.Sprintf("/posts/%v/comments/%v", tt.postId, tt.commentId),
+				bytes.NewBuffer(body))
+			req.Header.Set("Content-Type", "application/json")
+
+			if tt.mockSetup != nil {
+				tt.mockSetup(mocks)
+			}
+
+			app := fiber.New()
+			app.Patch(path,
+				func(c *fiber.Ctx) error {
+					c.Locals(middleware.UserIDKey, uint(1))
+					return c.Next()
+				},
+				commentHandlerImpl.UpdateComment)
+
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(respBody), tt.expectedBody)
+
+		})
+	}
+}
 func TestCommentHandlerImpl_DeleteComment(t *testing.T) {
 	logger.Log, _ = zap.NewDevelopment()
 	defer logger.Log.Sync()
@@ -412,6 +606,16 @@ func TestCommentHandlerImpl_DeleteComment(t *testing.T) {
 			},
 			expectedStatusCode: 500,
 			expectedBody:       "error",
+		},
+		{
+			name:      "Permission denied",
+			postId:    1,
+			commentId: 1,
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().DeleteComment(uint(1), uint(1), uint(1)).Return(comment.ErrPermissionDenied)
+			},
+			expectedStatusCode: 403,
+			expectedBody:       "Permission denied",
 		},
 	}
 

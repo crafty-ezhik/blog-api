@@ -1,4 +1,4 @@
-package post
+package post_test
 
 import "testing"
 

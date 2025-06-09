@@ -1,15 +1,20 @@
-package comment
+package comment_test
 
 import (
 	"fmt"
-	mock_comment "github.com/crafty-ezhik/blog-api/internal/comment/mock"
-	"github.com/crafty-ezhik/blog-api/internal/models"
+	"github.com/crafty-ezhik/blog-api/internal/comment"
+	mock_comment "github.com/crafty-ezhik/blog-api/mocks/comment"
+	"github.com/crafty-ezhik/blog-api/pkg/logger"
+	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,7 +24,7 @@ type Mocks struct {
 	CommentService *mock_comment.MockCommentService
 }
 
-func setup(t *testing.T) (*CommentHandlerImpl, *Mocks) {
+func setup(t *testing.T) (*comment.CommentHandlerImpl, *Mocks) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -28,27 +33,26 @@ func setup(t *testing.T) (*CommentHandlerImpl, *Mocks) {
 		Validator: validator.New(),
 	}
 
-	commentHandlerImpl := &CommentHandlerImpl{
-		CommentService: mockCommentService,
-		v:              mockValidator,
-	}
+	commentHandlerImpl := comment.NewCommentHandler(mockCommentService, mockValidator)
 	mocks := &Mocks{CommentService: mockCommentService}
 
 	return commentHandlerImpl, mocks
 }
 
 func TestCommentHandlerImpl_GetMyComment(t *testing.T) {
+	logger.Log, _ = zap.NewDevelopment()
+	defer logger.Log.Sync()
+
 	commentHandlerImpl, mocks := setup(t)
 
-	app := fiber.New()
 	path := "/my/posts/:postId/comments"
-	app.Get(path, commentHandlerImpl.GetMyComment)
 
 	tests := []struct {
 		name               string
-		postId             uint
+		postId             any
 		userId             uint
 		mockSetup          func(mock *Mocks)
+		handlerFunc        func(c *fiber.Ctx) error
 		expectedStatusCode int
 		expectedBody       string
 	}{
@@ -57,17 +61,76 @@ func TestCommentHandlerImpl_GetMyComment(t *testing.T) {
 			userId: 1,
 			postId: 1,
 			mockSetup: func(mock *Mocks) {
-				mock.CommentService.EXPECT().GetCommentsByPostID(uint(1), uint(1)).Return(&models.Comment{}, nil)
+				mock.CommentService.EXPECT().GetCommentsByPostID(uint(1), uint(1)).Return(
+					&comment.GetCommentsResponse{
+						Comments: []comment.GetCommentResponseBody{
+							{
+								ID:         0,
+								Title:      "TestTitle",
+								Content:    "TestContent",
+								AuthorName: "TestAuthorName",
+								PostTitle:  "TestPostTitle",
+							},
+						},
+					}, nil)
+			},
+			handlerFunc: func(c *fiber.Ctx) error {
+				c.Locals(middleware.UserIDKey, uint(1))
+				return c.Next()
 			},
 			expectedStatusCode: 200,
-			expectedBody:       "\"success\": true",
+			expectedBody:       "\"success\":true",
+		},
+		{
+			name:      "Invalid PostId",
+			userId:    1,
+			postId:    "one",
+			mockSetup: nil,
+			handlerFunc: func(c *fiber.Ctx) error {
+				c.Locals(middleware.UserIDKey, uint(1))
+				return c.Next()
+			},
+			expectedStatusCode: 400,
+			expectedBody:       "\"error\":\"Post ID must be an integer",
+		},
+		{
+			name:   "Comments Not Found",
+			userId: 1,
+			postId: 1,
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().GetCommentsByPostID(uint(1), uint(1)).Return(
+					nil, gorm.ErrRecordNotFound)
+			},
+			handlerFunc: func(c *fiber.Ctx) error {
+				c.Locals(middleware.UserIDKey, uint(1))
+				return c.Next()
+			},
+			expectedStatusCode: 404,
+			expectedBody:       "\"error\":\"Comment not found\"",
+		},
+		{
+			name:   "Server internal error",
+			userId: 1,
+			postId: 1,
+			mockSetup: func(mock *Mocks) {
+				mock.CommentService.EXPECT().GetCommentsByPostID(uint(1), uint(1)).Return(
+					nil, gorm.ErrInvalidDB)
+			},
+			handlerFunc: func(c *fiber.Ctx) error {
+				c.Locals(middleware.UserIDKey, uint(1))
+				return c.Next()
+			},
+			expectedStatusCode: 500,
+			expectedBody:       "\"error\":\"Internal server error\"",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/my/posts/1/comments", nil)
-			req.AddCookie(&http.Cookie{Name: "user_id", Value: fmt.Sprint(tt.userId)})
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/my/posts/%v/comments", tt.postId), nil)
+
+			app := fiber.New()
+			app.Get(path, tt.handlerFunc, commentHandlerImpl.GetMyComment)
 
 			if tt.mockSetup != nil {
 				tt.mockSetup(mocks)
@@ -77,7 +140,10 @@ func TestCommentHandlerImpl_GetMyComment(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
-			assert.Contains(t, resp.Body, tt.expectedBody)
+
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.Contains(t, string(respBody), tt.expectedBody)
 		})
 	}
 }

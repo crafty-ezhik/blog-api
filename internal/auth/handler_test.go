@@ -6,7 +6,7 @@ import (
 	"github.com/crafty-ezhik/blog-api/internal/config"
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/internal/user"
-	mock_user "github.com/crafty-ezhik/blog-api/internal/user/mock"
+	mock_user "github.com/crafty-ezhik/blog-api/mocks/user"
 	"github.com/crafty-ezhik/blog-api/pkg/jwt"
 	mock_jwt "github.com/crafty-ezhik/blog-api/pkg/jwt/mock"
 	"github.com/crafty-ezhik/blog-api/pkg/logger"

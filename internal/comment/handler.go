@@ -126,10 +126,16 @@ func (h *CommentHandlerImpl) UpdateComment(c *fiber.Ctx) error {
 	}
 
 	err = h.CommentService.UpdateComment(uint(commentID), uint(postID), userID, body)
+	if errors.Is(err, ErrPermissionDenied) {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"success": false,
+			"error":   "Permission denied",
+		})
+	}
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error":   err.Error(),
+			"error":   "Something went wrong",
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{

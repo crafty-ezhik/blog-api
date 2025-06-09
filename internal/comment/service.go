@@ -10,6 +10,8 @@ import (
 
 //go:generate mockgen -source=service.go -destination=mocks/comment_service_mock.go
 
+var ErrPermissionDenied = errors.New("permission denied")
+
 type CommentService interface {
 	GetCommentsByPostID(postID, userID uint) (*GetCommentsResponse, error)
 	CreateCommentByPostID(postID, authorID uint, comment *CreateCommentRequest) error
@@ -86,7 +88,7 @@ func (s *CommentServiceImpl) UpdateComment(commentID, postID, userID uint, field
 		Content: fields.Content,
 	}
 	if ok, err := s.checkPermission(postID, userID); err != nil || !ok {
-		return errors.New("permission denied")
+		return ErrPermissionDenied
 	}
 	err := s.CommentRepo.UpdateCommentByCommentAndPostID(comment)
 	if err != nil {
@@ -101,7 +103,7 @@ func (s *CommentServiceImpl) DeleteComment(commentID, PostID, userID uint) error
 		PostID: PostID,
 	}
 	if ok, err := s.checkPermission(PostID, userID); err != nil || !ok {
-		return errors.New("permission denied")
+		return ErrPermissionDenied
 	}
 
 	err := s.CommentRepo.DeleteCommentByCommentAndPostID(comment)

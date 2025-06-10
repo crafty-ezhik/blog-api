@@ -1,12 +1,14 @@
 package post
 
 import (
+	"errors"
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
 	"github.com/crafty-ezhik/blog-api/pkg/middleware"
 	"github.com/crafty-ezhik/blog-api/pkg/req"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 	"strconv"
 )
 
@@ -33,10 +35,16 @@ func NewPostHandler(postService PostService, validator *validate.XValidator) *Po
 
 func (h *PostHandlerImpl) GetAllPosts(c *fiber.Ctx) error {
 	data, err := h.PostService.GetAllPosts()
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"error":   "Posts not found",
+		})
+	}
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"message": err.Error(),
+			"message": "Something went wrong",
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -54,10 +62,16 @@ func (h *PostHandlerImpl) GetPostById(c *fiber.Ctx) error {
 		})
 	}
 	data, err := h.PostService.GetPostById(uint(id))
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success": false,
+			"message": "Post not found",
+		})
+	}
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"message": err.Error(),
+			"message": "Something went wrong",
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -83,7 +97,7 @@ func (h *PostHandlerImpl) CreatePost(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"message": err.Error(),
+			"message": "Something went wrong",
 		})
 	}
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -114,7 +128,7 @@ func (h *PostHandlerImpl) UpdatePost(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"message": err.Error(),
+			"message": "Something went wrong",
 		})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -135,7 +149,7 @@ func (h *PostHandlerImpl) DeletePost(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"message": err.Error(),
+			"message": "Something went wrong",
 		})
 	}
 	return c.Status(fiber.StatusNoContent).JSON(fiber.Map{

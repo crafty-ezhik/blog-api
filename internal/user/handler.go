@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"github.com/crafty-ezhik/blog-api/internal/models"
 	"github.com/crafty-ezhik/blog-api/internal/post"
 	"github.com/crafty-ezhik/blog-api/pkg/logger"
@@ -8,6 +9,7 @@ import (
 	"github.com/crafty-ezhik/blog-api/pkg/req"
 	"github.com/crafty-ezhik/blog-api/pkg/validate"
 	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 	"strconv"
 )
 
@@ -47,10 +49,16 @@ func (h *UserHandlerImpl) GetByID(c *fiber.Ctx) error {
 		})
 	}
 	result, err := h.UserService.GetByID(uint(id))
-	if err != nil {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"success": false,
 			"error":   "user not found",
+		})
+	}
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Something went wrong",
 		})
 	}
 
@@ -115,6 +123,12 @@ func (h *UserHandlerImpl) Update(c *fiber.Ctx) error {
 		Age:  body.Age,
 	}
 	err = h.UserService.Update(ctxUserID, updated)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"error":   "Something went wrong",
+		})
+	}
 	return c.JSON(fiber.Map{
 		"success": true,
 		"message": "user updated",
@@ -135,7 +149,7 @@ func (h *UserHandlerImpl) Delete(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
-			"error":   err.Error(),
+			"error":   "Something went wrong",
 		})
 	}
 
